@@ -171,7 +171,7 @@
                     push(objectRef, { x: cube.position.x, y: cube.position.y, z: cube.position.z });
                     player.userData.lastObjectTime = Date.now();
                 }
-                if (keys['m']) { set(obejctRef, null); }
+                if (keys['m']) { set(objectRef, null); }
                 player.position.add(movement);
                 velocityY -= gravity;
                 player.position.y += velocityY;
