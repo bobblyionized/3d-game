@@ -2,16 +2,22 @@
     <head>
         <style>
             html, body { margin: 0; overflow: hidden; }
-            #cords { position: absolute; color: white; }
+            #cords { position: absolute; margin: 0px; top: 0px; color: white; }
             #objectCount { position: absolute; top: 5px; color: white; }
             #playerCount { position: absolute; top: 26px; color: white; }
             p { background-color: black; }
         </style>
     </head>
     <body>
-        <p id="cords">cords: 0, 0, 0</p>
-        <p id="objectCount">objects: 0</p>
-        <p id="playerCount">players: 0</p>
+        <div id="game" style="display: none;">
+            <p id="cords">cords: 0, 0, 0</p>
+            <p id="objectCount">objects: 0</p>
+            <p id="playerCount">players: 0</p>
+        </div>
+        <div id="usernameInput">
+            <input onkeydown="return /[a-z0-9!@#$%^&*(){}:;<,>.?/|]/i.test(event.key)" maxlength="50" type="text" id="username" placeholder="enter username">
+            <button id="startButton">start</button>
+        </div>
         <script type="module">
             import * as THREE from './three.module.js';
             import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
@@ -39,7 +45,7 @@
             const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
+            document.getElementById("game").appendChild(renderer.domElement);
             const playerGeometry = new THREE.BoxGeometry(1, 1, 1);
             const playerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
             const otherPlayerMaterial = new THREE.MeshBasicMaterial({ color: "red" });
@@ -72,7 +78,15 @@
                 cameraAngleY = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, cameraAngleY));
             });
             document.body.addEventListener('click', () => {
-                document.body.requestPointerLock();
+                if (document.getElementById("usernameInput").style.display == "none") {
+                    document.body.requestPointerLock();
+                }
+            });
+            document.getElementById("startButton").addEventListener('click', () => {
+                playerRef = ref(database, "players/");
+                pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value };
+                set(currentPlayerRef, pos);
+                gameLoop();
             });
             function checkCollision(object1, object2) {
                 const object1Box = new THREE.Box3().setFromObject(object1);
@@ -109,11 +123,19 @@
                             if (key != playerID) {
                                 let existingPlayer = objects.find(obj => obj.userData.id === key);
                                 if (existingPlayer) {
-                                    existingPlayer.position.set(data[key].x, data[key].y, data[key].z);
+                                    existingPlayer.position.lerp(new THREE.Vector3(data[key].x, data[key].y, data[key].z), 0.1);
                                 } else {
                                     const newPlayer = new THREE.Mesh(playerGeometry, otherPlayerMaterial);
                                     newPlayer.position.set(data[key].x, data[key].y, data[key].z);
                                     newPlayer.userData.id = key;
+                                    const spriteMaterial = new THREE.SpriteMaterial({ 
+                                        map: new THREE.CanvasTexture(makeText(data[key].username)), 
+                                        transparent: true 
+                                    });
+                                    const sprite = new THREE.Sprite(spriteMaterial);
+                                    sprite.scale.set(2, 1, 1);
+                                    sprite.position.set(0, 1, 0);
+                                    newPlayer.add(sprite);
                                     scene.add(newPlayer);
                                     objects.push(newPlayer);
                                 }
@@ -130,6 +152,21 @@
                         objects = objects.filter(obj => obj.userData.id !== snapshot.key);
                     }
                 });
+            }
+            function makeText(text) {
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                context.font = 'Bold 60px Arial';
+                context.fillStyle = 'white';
+                const textWidth = context.measureText(text).width;
+                canvas.width = textWidth + 100;
+                canvas.height = 100;
+                context.font = 'Bold 60px Arial';
+                context.fillStyle = 'white';
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText(text, canvas.width / 2, canvas.height / 2);
+                return canvas;
             }
             let objectCount = 0;
             function getObjects() {
@@ -166,6 +203,8 @@
             let objectCooldown = 500;
             onDisconnect(currentPlayerRef).remove();
             function gameLoop() {
+                document.getElementById("game").style.display = "block";
+                document.getElementById("usernameInput").style.display = "none";
                 const forward = new THREE.Vector3();
                 camera.getWorldDirection(forward);
                 forward.y = 0;
@@ -210,12 +249,11 @@
                 }
                 if (counter > 5) {
                     counter = 0;
-                    pos = { x: player.position.x, y: player.position.y, z: player.position.z };
+                    pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value };
                     set(currentPlayerRef, pos);
                 }
                 counter++;
             }
-            gameLoop();
         </script>
     </body>
 </html>
