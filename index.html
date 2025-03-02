@@ -1,4 +1,4 @@
-<html>
+<div><br class="Apple-interchange-newline"><html>
     <head>
         <style>
             html, body { margin: 0; overflow: hidden; }
@@ -8,7 +8,7 @@
         <script type="module">
             import * as THREE from './three.module.js';
             import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-            import { getDatabase, ref, push, onDisconnect, get, onChildRemoved, set } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
+            import { getDatabase, ref, push, onDisconnect, get, child, onValue, set, onChildAdded, onChildRemoved } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
             const firebaseConfig = {
                 apiKey: "AIzaSyBPC7yG2bP6ninmcuUOoZRyilVx79MfqX4",
                 authDomain: "d-game-42445.firebaseapp.com",
@@ -21,64 +21,56 @@
             };
             const app = initializeApp(firebaseConfig);
             const database = getDatabase(app);
-            const playerRef = ref(database, "players/");
-            const objectRef = ref(database, "objects/");
+            const dbRef = ref(database);
+            let playerRef = ref(database, "players/");
+            let objectRef = ref(database, "objects/");
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let currentPlayerRef = ref(database, "players/" + playerID);
             let objects = [];
-            
             const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
-            
             const playerGeometry = new THREE.BoxGeometry(1, 1, 1);
             const playerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
             const otherPlayerMaterial = new THREE.MeshBasicMaterial({ color: "red" });
             const player = new THREE.Mesh(playerGeometry, playerMaterial);
             player.position.set(0, 5, 0);
             scene.add(player);
-            
             const groundGeometry = new THREE.PlaneGeometry(25, 25);
             const groundMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide });
             const ground = new THREE.Mesh(groundGeometry, groundMaterial);
             ground.rotation.x = -Math.PI / 2;
             scene.add(ground);
             objects.push(ground);
-            
             const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
             const cubeMaterial = new THREE.MeshBasicMaterial({ color: "rgb(255, 255, 255)" });
-            
-            const keys = {};
             document.addEventListener('keydown', (event) => { keys[event.key] = true; });
             document.addEventListener('keyup', (event) => { delete keys[event.key]; });
-            
             let cameraAngleX = 0;
             let cameraAngleY = 0;
             let isMouseDown = true;
             const moveSpeed = 0.1;
+            const keys = {};
             const jumpStrength = 0.3;
             const gravity = 0.01;
             let velocityY = 0;
             let isJumping = false;
-            
+            let pos = { x: player.position.x, y: player.position.y, z: player.position.z };
             document.addEventListener('mousemove', (event) => {
                 cameraAngleX -= event.movementX * 0.005;
                 cameraAngleY -= event.movementY * 0.005;
                 cameraAngleY = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, cameraAngleY));
             });
-            
             document.body.addEventListener('click', () => {
                 document.body.requestPointerLock();
             });
-            
             function checkCollision(object1, object2) {
                 const object1Box = new THREE.Box3().setFromObject(object1);
                 const object2Box = new THREE.Box3().setFromObject(object2);
                 return object1Box.intersectsBox(object2Box);
             }
-            
             function handleCollisions(otherObject) {
                 if (checkCollision(player, otherObject)) {
                     const objectBox = new THREE.Box3().setFromObject(otherObject);
@@ -98,7 +90,6 @@
                     }
                 }
             }
-            
             function getPlayers() {
                 get(playerRef).then((snapshot) => {
                     if (snapshot.exists()) {
@@ -120,6 +111,7 @@
                     }
                 });
                 onChildRemoved(playerRef, (snapshot) => {
+                    const data = snapshot.val();
                     let existingPlayer = objects.find(obj => obj.userData.id === snapshot.key);
                     if (existingPlayer) {
                         scene.remove(existingPlayer);
@@ -127,7 +119,6 @@
                     }
                 });
             }
-            
             function getObjects() {
                 get(objectRef).then((snapshot) => {
                     if (snapshot.exists()) {
@@ -147,6 +138,7 @@
                     }
                 });
                 onChildRemoved(objectRef, (snapshot) => {
+                    const data = snapshot.val();
                     let existingObject = objects.find(obj => obj.userData.id === snapshot.key);
                     if (existingObject) {
                         scene.remove(existingObject);
@@ -154,55 +146,23 @@
                     }
                 });
             }
-            
             let counter = 0;
             let objectCooldown = 500;
             onDisconnect(currentPlayerRef).remove();
-            
             function gameLoop() {
-                // Compute the camera's forward vector (ignoring vertical component)
                 const forward = new THREE.Vector3();
                 camera.getWorldDirection(forward);
                 forward.y = 0;
                 forward.normalize();
-                
-                // Use the camera angle to compute a "direction" vector and a "right" vector
                 const direction = new THREE.Vector3(Math.sin(cameraAngleX), 0, Math.cos(cameraAngleX));
                 const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
-                
-                // Handle normal movement
+                let movement = new THREE.Vector3(0, 0, 0);
                 if (keys['s']) player.position.add(direction.clone().multiplyScalar(moveSpeed));
                 if (keys['w']) player.position.add(direction.clone().multiplyScalar(-moveSpeed));
                 if (keys['d']) player.position.add(right.clone().multiplyScalar(-moveSpeed));
                 if (keys['a']) player.position.add(right.clone().multiplyScalar(moveSpeed));
-                
-                // Dash mechanic: press Q to dash
-                if (keys['q']) {
-                    // Build a dash vector based on current movement keys
-                    let dashDirection = new THREE.Vector3();
-                    if (keys['w']) dashDirection.add(direction.clone().multiplyScalar(-1));
-                    if (keys['s']) dashDirection.add(direction.clone());
-                    if (keys['a']) dashDirection.add(right.clone());
-                    if (keys['d']) dashDirection.add(right.clone().multiplyScalar(-1));
-                    // If not moving, use the forward (camera-look) direction
-                    if (dashDirection.length() === 0) {
-                        dashDirection = forward.clone();
-                    }
-                    dashDirection.normalize();
-                    const dashDistance = 2.0; // Adjust dash distance as desired
-                    player.position.add(dashDirection.multiplyScalar(dashDistance));
-                    // Remove the Q key so the dash happens only once per press
-                    delete keys['q'];
-                }
-                
-                // Jumping logic
-                if (keys[' '] && !isJumping) { 
-                    velocityY = jumpStrength; 
-                    isJumping = true; 
-                }
-                if (keys['r']) { 
-                    player.position.set(0, 5, 0);
-                }
+                if (keys[' '] && !isJumping) { velocityY = jumpStrength; isJumping = true; }
+                if (keys['r']) { player.position.x = 0; player.position.y = 5; player.position.z = 0; }
                 if (keys['z'] && (!player.userData.lastObjectTime || Date.now() - player.userData.lastObjectTime > objectCooldown)) {
                     const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
                     cube.position.set(player.position.x, player.position.y - 1.51, player.position.z);
@@ -211,24 +171,14 @@
                     push(objectRef, { x: cube.position.x, y: cube.position.y, z: cube.position.z });
                     player.userData.lastObjectTime = Date.now();
                 }
-                if (keys['m']) { 
-                    set(objectRef, null); 
-                }
-                
-                // Apply gravity
+                if (keys['m']) { set(objectRef, null); }
+                player.position.add(movement);
                 velocityY -= gravity;
                 player.position.y += velocityY;
-                
-                // Update camera position and orientation
                 const radius = 5;
-                const cameraOffset = new THREE.Vector3(
-                    Math.sin(cameraAngleX) * radius,
-                    3 + Math.sin(cameraAngleY) * 2,
-                    Math.cos(cameraAngleX) * radius
-                );
+                const cameraOffset = new THREE.Vector3(Math.sin(cameraAngleX) * radius, 3 + Math.sin(cameraAngleY) * 2, Math.cos(cameraAngleX) * radius);
                 camera.position.copy(player.position).add(cameraOffset);
                 camera.lookAt(player.position);
-                
                 renderer.render(scene, camera);
                 requestAnimationFrame(gameLoop);
                 getPlayers();
@@ -238,11 +188,12 @@
                 }
                 if (counter > 5) {
                     counter = 0;
-                    set(currentPlayerRef, { x: player.position.x, y: player.position.y, z: player.position.z });
+                    pos = { x: player.position.x, y: player.position.y, z: player.position.z };
+                    set(currentPlayerRef, pos);
                 }
                 counter++;
             }
             gameLoop();
         </script>
     </body>
-</html>
+</html></div>
