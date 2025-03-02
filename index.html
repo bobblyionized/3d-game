@@ -4,11 +4,14 @@
             html, body { margin: 0; overflow: hidden; }
             #cords { position: absolute; color: white; }
             #objectCount { position: absolute; top: 5px; color: white; }
+            #playerCount { position: absolute; top: 26px; color: white; }
+            p { background-color: black; }
         </style>
     </head>
     <body>
         <p id="cords">cords: 0, 0, 0</p>
         <p id="objectCount">objects: 0</p>
+        <p id="playerCount">players: 0</p>
         <script type="module">
             import * as THREE from './three.module.js';
             import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
@@ -27,6 +30,7 @@
             const database = getDatabase(app);
             const dbRef = ref(database);
             let playerRef = ref(database, "players/");
+            set(playerRef, null);
             let objectRef = ref(database, "objects/");
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let currentPlayerRef = ref(database, "players/" + playerID);
@@ -94,11 +98,14 @@
                     }
                 }
             }
+            let playerCount = 0;
             function getPlayers() {
+                playerCount = 0;
                 get(playerRef).then((snapshot) => {
                     if (snapshot.exists()) {
                         const data = snapshot.val();
                         for (let key in data) {
+                            playerCount++;
                             if (key != playerID) {
                                 let existingPlayer = objects.find(obj => obj.userData.id === key);
                                 if (existingPlayer) {
@@ -112,6 +119,7 @@
                                 }
                             }
                         }
+                        document.getElementById("playerCount").textContent = "players: " + playerCount;
                     }
                 });
                 onChildRemoved(playerRef, (snapshot) => {
