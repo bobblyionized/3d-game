@@ -3,10 +3,12 @@
         <style>
             html, body { margin: 0; overflow: hidden; }
             #cords { position: absolute; color: white; }
+            #objectCount { position: absolute; top: 5px; color: white; }
         </style>
     </head>
     <body>
         <p id="cords">cords: 0, 0, 0</p>
+        <p id="objectCount">objects: 0</p>
         <script type="module">
             import * as THREE from './three.module.js';
             import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
@@ -121,11 +123,14 @@
                     }
                 });
             }
+            let objectCount = 0;
             function getObjects() {
+                objectCount = 0;
                 get(objectRef).then((snapshot) => {
                     if (snapshot.exists()) {
                         const data = snapshot.val();
                         for (let key in data) {
+                            objectCount++;
                             let existingObject = objects.find(obj => obj.userData.id === key);
                             if (existingObject) {
                                 existingObject.position.set(data[key].x, data[key].y, data[key].z);
@@ -137,6 +142,7 @@
                                 objects.push(newObject);
                             }
                         }
+                        document.getElementById("objectCount").textContent = "objects: " + objectCount;
                     }
                 });
                 onChildRemoved(objectRef, (snapshot) => {
@@ -177,7 +183,6 @@
                 player.position.add(movement);
                 velocityY -= gravity;
                 player.position.y += velocityY;
-                console.log(player.position.y);
                 if (player.position.y < -25) {
                     player.position.x = 0; 
                     player.position.y = 5; 
