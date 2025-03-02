@@ -1,1 +1,200 @@
+<html>
+    <head>
+        <style>
+            html, body { margin: 0; overflow: hidden; }
+        </style>
+    </head>
+    <body>
+        <script type="module">
+            import * as THREE from './three.module.js';
+            import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+            import { getDatabase, ref, push, onDisconnect, get, child, onValue, set, onChildAdded, onChildRemoved } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
+            const firebaseConfig = {
+                apiKey: "AIzaSyBPC7yG2bP6ninmcuUOoZRyilVx79MfqX4",
+                authDomain: "d-game-42445.firebaseapp.com",
+                databaseURL: "https://d-game-42445-default-rtdb.firebaseio.com",
+                projectId: "d-game-42445",
+                storageBucket: "d-game-42445.firebasestorage.app",
+                messagingSenderId: "1006407308292",
+                appId: "1:1006407308292:web:2e79223d6114af77bc5151",
+                measurementId: "G-XFL3RPYLNZ"
+            };
+            const app = initializeApp(firebaseConfig);
+            const database = getDatabase(app);
+            const dbRef = ref(database);
+            let playerRef = ref(database, "players/");
+            let objectRef = ref(database, "objects/");
+            let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
+            let currentPlayerRef = ref(database, "players/" + playerID);
+            let objects = [];
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            const playerGeometry = new THREE.BoxGeometry(1, 1, 1);
+            const playerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const otherPlayerMaterial = new THREE.MeshBasicMaterial({ color: "red" });
+            const player = new THREE.Mesh(playerGeometry, playerMaterial);
+            player.position.set(0, 5, 0);
+            scene.add(player);
+            const groundGeometry = new THREE.PlaneGeometry(25, 25);
+            const groundMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            scene.add(ground);
+            objects.push(ground);
+            const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
+            const cubeMaterial = new THREE.MeshBasicMaterial({ color: "rgb(255, 255, 255)" });
+            document.addEventListener('keydown', (event) => { keys[event.key] = true; });
+            document.addEventListener('keyup', (event) => { delete keys[event.key]; });
+            let cameraAngleX = 0;
+            let cameraAngleY = 0;
+            let isMouseDown = true;
+            const moveSpeed = 0.1;
+            const keys = {};
+            const jumpStrength = 0.3;
+            const gravity = 0.01;
+            let velocityY = 0;
+            let isJumping = false;
+            let pos = { x: player.position.x, y: player.position.y, z: player.position.z };
+            document.addEventListener('mousemove', (event) => {
+                cameraAngleX -= event.movementX * 0.005;
+                cameraAngleY -= event.movementY * 0.005;
+                cameraAngleY = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, cameraAngleY));
+            });
+            document.body.addEventListener('click', () => {
+                document.body.requestPointerLock();
+            });
+            function checkCollision(object1, object2) {
+                const object1Box = new THREE.Box3().setFromObject(object1);
+                const object2Box = new THREE.Box3().setFromObject(object2);
+                return object1Box.intersectsBox(object2Box);
+            }
+            function handleCollisions(otherObject) {
+                if (checkCollision(player, otherObject)) {
+                    const objectBox = new THREE.Box3().setFromObject(otherObject);
+                    const playerBox = new THREE.Box3().setFromObject(player);
+                    const intersection = playerBox.intersect(objectBox);
+                    if (velocityY < 0 && intersection && intersection.max.y === objectBox.max.y) {
+                        player.position.y = objectBox.max.y + playerBox.getSize(new THREE.Vector3()).y / 2 + 0.5;
+                        velocityY = 0;
+                        isJumping = false;
+                    } else {
+                        const direction = new THREE.Vector3(Math.sin(cameraAngleX), 0, Math.cos(cameraAngleX));
+                        const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
+                        if (keys['w']) player.position.add(direction.clone().multiplyScalar(moveSpeed));
+                        if (keys['s']) player.position.add(direction.clone().multiplyScalar(-moveSpeed));
+                        if (keys['d']) player.position.add(right.clone().multiplyScalar(moveSpeed));
+                        if (keys['a']) player.position.add(right.clone().multiplyScalar(-moveSpeed));
+                    }
+                }
+            }
+            function getPlayers() {
+                get(playerRef).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        for (let key in data) {
+                            if (key != playerID) {
+                                let existingPlayer = objects.find(obj => obj.userData.id === key);
+                                if (existingPlayer) {
+                                    existingPlayer.position.set(data[key].x, data[key].y, data[key].z);
+                                } else {
+                                    const newPlayer = new THREE.Mesh(playerGeometry, otherPlayerMaterial);
+                                    newPlayer.position.set(data[key].x, data[key].y, data[key].z);
+                                    newPlayer.userData.id = key;
+                                    scene.add(newPlayer);
+                                    objects.push(newPlayer);
+                                }
+                            }
+                        }
+                    }
+                });
+                onChildRemoved(playerRef, (snapshot) => {
+                    const data = snapshot.val();
+                    let existingPlayer = objects.find(obj => obj.userData.id === snapshot.key);
+                    if (existingPlayer) {
+                        scene.remove(existingPlayer);
+                        objects = objects.filter(obj => obj.userData.id !== snapshot.key);
+                    }
+                });
+            }
+            function getObjects() {
+                get(objectRef).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        for (let key in data) {
+                            let existingObject = objects.find(obj => obj.userData.id === key);
+                            if (existingObject) {
+                                existingObject.position.set(data[key].x, data[key].y, data[key].z);
+                            } else {
+                                const newObject = new THREE.Mesh(cubeGeometry, cubeMaterial);
+                                newObject.position.set(data[key].x, data[key].y, data[key].z);
+                                newObject.userData.id = key;
+                                scene.add(newObject);
+                                objects.push(newObject);
+                            }
+                        }
+                    }
+                });
+                onChildRemoved(objectRef, (snapshot) => {
+                    const data = snapshot.val();
+                    let existingObject = objects.find(obj => obj.userData.id === snapshot.key);
+                    if (existingObject) {
+                        scene.remove(existingObject);
+                        objects = objects.filter(obj => obj.userData.id !== snapshot.key);
+                    }
+                });
+            }
+            let counter = 0;
+            let objectCooldown = 500;
+            onDisconnect(currentPlayerRef).remove();
+            function gameLoop() {
+                const forward = new THREE.Vector3();
+                camera.getWorldDirection(forward);
+                forward.y = 0;
+                forward.normalize();
+                const direction = new THREE.Vector3(Math.sin(cameraAngleX), 0, Math.cos(cameraAngleX));
+                const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
+                let movement = new THREE.Vector3(0, 0, 0);
+                if (keys['s']) player.position.add(direction.clone().multiplyScalar(moveSpeed));
+                if (keys['w']) player.position.add(direction.clone().multiplyScalar(-moveSpeed));
+                if (keys['d']) player.position.add(right.clone().multiplyScalar(-moveSpeed));
+                if (keys['a']) player.position.add(right.clone().multiplyScalar(moveSpeed));
+                if (keys[' '] && !isJumping) { velocityY = jumpStrength; isJumping = true; }
+                if (keys['r']) { player.position.x = 0; player.position.y = 5; player.position.z = 0; }
+                if (keys['z'] && (!player.userData.lastObjectTime || Date.now() - player.userData.lastObjectTime > objectCooldown)) {
+                    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+                    cube.position.set(player.position.x, player.position.y - 1.51, player.position.z);
+                    scene.add(cube);
+                    objects.push(cube);
+                    push(objectRef, { x: cube.position.x, y: cube.position.y, z: cube.position.z });
+                    player.userData.lastObjectTime = Date.now();
+                }
+                if (keys['m']) { set(obejctRef, null); }
+                player.position.add(movement);
+                velocityY -= gravity;
+                player.position.y += velocityY;
+                const radius = 5;
+                const cameraOffset = new THREE.Vector3(Math.sin(cameraAngleX) * radius, 3 + Math.sin(cameraAngleY) * 2, Math.cos(cameraAngleX) * radius);
+                camera.position.copy(player.position).add(cameraOffset);
+                camera.lookAt(player.position);
+                renderer.render(scene, camera);
+                requestAnimationFrame(gameLoop);
+                getPlayers();
+                getObjects();
+                for (let object of objects) {
+                    handleCollisions(object);
+                }
+                if (counter > 5) {
+                    counter = 0;
+                    pos = { x: player.position.x, y: player.position.y, z: player.position.z };
+                    set(currentPlayerRef, pos);
+                }
+                counter++;
+            }
+            gameLoop();
+        </script>
+    </body>
+</html>
 
