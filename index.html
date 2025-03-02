@@ -2,9 +2,11 @@
     <head>
         <style>
             html, body { margin: 0; overflow: hidden; }
+            #cords { position: absolute; color: white; }
         </style>
     </head>
     <body>
+        <p id="cords">cords: 0, 0, 0</p>
         <script type="module">
             import * as THREE from './three.module.js';
             import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
@@ -175,6 +177,13 @@
                 player.position.add(movement);
                 velocityY -= gravity;
                 player.position.y += velocityY;
+                console.log(player.position.y);
+                if (player.position.y < -25) {
+                    player.position.x = 0; 
+                    player.position.y = 5; 
+                    player.position.z = 0; 
+                }
+                document.getElementById("cords").textContent = "cords: " + Math.round(player.position.x) + ", " + Math.round(player.position.y) + ", " + Math.round(player.position.z);
                 const radius = 5;
                 const cameraOffset = new THREE.Vector3(Math.sin(cameraAngleX) * radius, 3 + Math.sin(cameraAngleY) * 2, Math.cos(cameraAngleX) * radius);
                 camera.position.copy(player.position).add(cameraOffset);
