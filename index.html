@@ -1,22 +1,112 @@
 <html>
     <head>
         <style>
-            html, body { margin: 0; overflow: hidden; }
-            #cords { position: absolute; margin: 0px; top: 0px; color: white; background-color: black; }
-            #objectCount { position: absolute; top: 5px; color: white; background-color: black; }
-            #playerCount { position: absolute; top: 26px; color: white; background-color: black; }
-            #chatArea { color: white; bottom: 25px; left: 0px; height: 400px; width: 400px; overflow-y: hidden; position: absolute; }
-            #chatInput { position: absolute; left: 0px; bottom: 0px; width: 400px; }
+            html, body {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #000000, #636363);
+                overflow: hidden;
+            }
+            #game canvas {
+                position: absolute;
+                top: 0;
+                left: 0;
+                z-index: 1;
+            }
+            #cords, #objectCount, #playerCount, #chatArea, #chatInput {
+                position: absolute;
+                z-index: 2;
+            }
+            #cords, #objectCount, #playerCount {
+                color: #fff;
+                background: rgba(0, 0, 0, 0.6);
+                padding: 5px 10px;
+                border-radius: 5px;
+                font-size: 14px;
+            }
+            #cords { top: 10px; left: 10px; }
+            #objectCount { top: 50px; left: 10px; }
+            #playerCount { top: 90px; left: 10px; }
+            #chatArea {
+                bottom: 80px;
+                left: 20px;
+                width: 350px;
+                height: 300px;
+                overflow-y: auto;
+                background: rgba(0, 0, 0, 0.5);
+                padding: 10px;
+                border-radius: 10px;
+            }
+            #chatArea p {
+                margin: 5px 0;
+                font-size: 14px;
+                color: white;
+            }
+            #chatInput {
+                left: 20px;
+                bottom: 20px;
+                width: 350px;
+                padding: 10px;
+                border: none;
+                border-radius: 25px;
+                font-size: 16px;
+                outline: none;
+                background: rgba(0, 0, 0, 0.7);
+                color: white;
+            }
+            #usernameInput {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(255, 255, 255, 0.1);
+                padding: 20px 30px;
+                border-radius: 15px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+                text-align: center;
+                z-index: 3;
+            }
+            #usernameInput input {
+                width: 250px;
+                padding: 12px;
+                border: none;
+                border-radius: 25px;
+                margin-bottom: 10px;
+                font-size: 16px;
+                outline: none;
+            }
+            #startButton {
+                padding: 12px 30px;
+                border: none;
+                border-radius: 25px;
+                font-size: 16px;
+                cursor: pointer;
+                background: linear-gradient(45deg, #000000, #505050);
+                color: #fff;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+                transition: transform 0.2s ease-in-out;
+            }
+            #startButton:hover {
+                transform: scale(1.05);
+            }
+            #startButton:active {
+                transform: scale(0.95);
+            }
+            #game {
+                display: none;
+            }
         </style>
     </head>
     <body>
-        <div id="game" style="display: none;">
+        <div id="game">
             <p id="cords">cords: 0, 0, 0</p>
             <p id="objectCount">objects: 0</p>
             <p id="playerCount">players: 0</p>
             <div id="chatArea"></div>
             <input type="text" id="chatInput" placeholder="press enter to message">
-
         </div>
         <div id="usernameInput">
             <input onkeydown="return /[a-z0-9!@#$%^&*(){}:;<,>.?/|]/i.test(event.key)" maxlength="50" type="text" id="username" placeholder="enter username">
@@ -25,7 +115,8 @@
         <script type="module">
             import * as THREE from './three.module.js';
             import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-            import { getDatabase, ref, push, onDisconnect, get, child, onValue, set, onChildAdded, onChildRemoved } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
+            import { getDatabase, ref, push, onDisconnect, get, onChildAdded, onChildRemoved, set } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
+            
             const firebaseConfig = {
                 apiKey: "AIzaSyBPC7yG2bP6ninmcuUOoZRyilVx79MfqX4",
                 authDomain: "d-game-42445.firebaseapp.com",
@@ -36,9 +127,9 @@
                 appId: "1:1006407308292:web:2e79223d6114af77bc5151",
                 measurementId: "G-XFL3RPYLNZ"
             };
+            
             const app = initializeApp(firebaseConfig);
             const database = getDatabase(app);
-            const dbRef = ref(database);
             let playerRef = ref(database, "players/");
             set(playerRef, null);
             let objectRef = ref(database, "objects/");
@@ -51,21 +142,25 @@
             const renderer = new THREE.WebGLRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.getElementById("game").appendChild(renderer.domElement);
+            
             const playerGeometry = new THREE.BoxGeometry(1, 1, 1);
             const playerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
             const otherPlayerMaterial = new THREE.MeshBasicMaterial({ color: "red" });
             const player = new THREE.Mesh(playerGeometry, playerMaterial);
             player.position.set(0, 5, 0);
             scene.add(player);
+            
             const groundGeometry = new THREE.PlaneGeometry(25, 25);
             const groundMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide });
             const ground = new THREE.Mesh(groundGeometry, groundMaterial);
             ground.rotation.x = -Math.PI / 2;
             scene.add(ground);
             objects.push(ground);
+            
             const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
             let cubeMaterial = new THREE.MeshBasicMaterial({ color: "rgb(255, 255, 255)" });
             let cooldown = 500;
+            
             document.addEventListener('keydown', (event) => { 
                 keys[event.key] = true; 
                 const chatInput = document.getElementById("chatInput");
@@ -80,32 +175,35 @@
                         chatInput.value = "";
                         chatInput.lastMessageTime = Date.now();
                         set(messageRef, null);
-                        chatInput.blur()
+                        chatInput.blur();
                         chatArea.scrollTop = chatArea.scrollHeight;
                         document.body.requestPointerLock();
                     }
                 }
             });
+            
             document.addEventListener('keyup', (event) => { delete keys[event.key]; });
             let cameraAngleX = 0;
             let cameraAngleY = 0;
-            let isMouseDown = true;
-            const moveSpeed = 0.1;
+            const moveSpeed = 0.125;
             const keys = {};
             const jumpStrength = 0.3;
             const gravity = 0.01;
             let velocityY = 0;
             let isJumping = false;
             let pos = { x: player.position.x, y: player.position.y, z: player.position.z };
+            
             document.addEventListener('mousemove', (event) => {
                 cameraAngleX -= event.movementX * 0.005;
                 cameraAngleY -= event.movementY * 0.005;
             });
+            
             document.body.addEventListener('click', () => {
                 if (document.getElementById("usernameInput").style.display == "none") {
                     document.body.requestPointerLock();
                 }
             });
+            
             document.getElementById("startButton").addEventListener('click', () => {
                 playerRef = ref(database, "players/");
                 pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value };
@@ -114,11 +212,13 @@
                 push(messageRef, { username: "System", message: document.getElementById("username").value + " has joined the game" });
                 set(messageRef, null);
             });
+            
             function checkCollision(object1, object2) {
                 const object1Box = new THREE.Box3().setFromObject(object1);
                 const object2Box = new THREE.Box3().setFromObject(object2);
                 return object1Box.intersectsBox(object2Box);
             }
+            
             function handleCollisions(otherObject) {
                 if (checkCollision(player, otherObject)) {
                     const objectBox = new THREE.Box3().setFromObject(otherObject);
@@ -138,6 +238,7 @@
                     }
                 }
             }
+            
             let playerCount = 0;
             function getPlayers() {
                 playerCount = 0;
@@ -171,7 +272,6 @@
                     }
                 });
                 onChildRemoved(playerRef, (snapshot) => {
-                    const data = snapshot.val();
                     let existingPlayer = objects.find(obj => obj.userData.id === snapshot.key);
                     if (existingPlayer) {
                         scene.remove(existingPlayer);
@@ -179,11 +279,11 @@
                     }
                 });
             }
+            
             function makeText(text) {
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 context.font = 'Bold 60px Arial';
-                context.fillStyle = 'white';
                 const textWidth = context.measureText(text).width;
                 canvas.width = textWidth + 100;
                 canvas.height = 100;
@@ -194,14 +294,8 @@
                 context.fillText(text, canvas.width / 2, canvas.height / 2);
                 return canvas;
             }
+            
             let objectCount = 0;
-            const spriteMaterial = new THREE.SpriteMaterial({ 
-                map: new THREE.CanvasTexture(makeText(document.getElementById("username").value)), 
-                transparent: true 
-            });
-            const sprite = new THREE.Sprite(spriteMaterial);
-            sprite.scale.set(2, 1, 1);
-            sprite.position.set(0, 1, 0);
             function getObjects() {
                 objectCount = 0;
                 get(objectRef).then((snapshot) => {
@@ -225,7 +319,6 @@
                     }
                 });
                 onChildRemoved(objectRef, (snapshot) => {
-                    const data = snapshot.val();
                     let existingObject = objects.find(obj => obj.userData.id === snapshot.key);
                     if (existingObject) {
                         scene.remove(existingObject);
@@ -233,6 +326,7 @@
                     }
                 });
             }
+            
             let counter = 0;
             let objectCooldown = 500;
             onDisconnect(currentPlayerRef).remove();
@@ -246,17 +340,10 @@
                 if (data.username == "System") {
                     message.style.fontStyle = "italic";
                 }
-                if (data.message.includes("/playsound ")) {
-                    let command = data.message.split(' ');
-                    let sound = command[1];
-                    let audioElement = document.createElement("audio");
-                    audioElement.src = "https://raw.githubusercontent.com/seaotter6382/seaotter6382.github.io/refs/heads/main/sounds/" + sound + ".mp3";
-                    audioElement.autoplay = true;
-                    document.body.appendChild(audioElement);
-                }
                 chatArea.scrollTop = chatArea.scrollHeight;
                 chatArea.appendChild(message);
             });
+            
             function gameLoop() {
                 document.getElementById("game").style.display = "block";
                 document.getElementById("usernameInput").style.display = "none";
@@ -273,7 +360,7 @@
                     if (keys['d']) player.position.add(right.clone().multiplyScalar(-moveSpeed));
                     if (keys['a']) player.position.add(right.clone().multiplyScalar(moveSpeed));
                     if (keys[' '] && !isJumping) { velocityY = jumpStrength; isJumping = true; }
-                    if (keys['r']) { player.position.x = 0; player.position.y = 5; player.position.z = 0; }
+                    if (keys['r']) { player.position.set(0, 5, 0); }
                     if (keys['c'] && (!player.userData.lastObjectTime || Date.now() - player.userData.lastObjectTime > objectCooldown)) {
                         let color = "rgb(" + Math.floor(Math.random() * 256) + ", " + Math.floor(Math.random() * 256) + ", " + Math.floor(Math.random() * 256) + ")";
                         push(objectRef, { x: player.position.x, y: player.position.y - 1.51, z: player.position.z, color: color });
@@ -289,9 +376,7 @@
                 velocityY -= gravity;
                 player.position.y += velocityY;
                 if (player.position.y < -25) {
-                    player.position.x = 0; 
-                    player.position.y = 5; 
-                    player.position.z = 0; 
+                    player.position.set(0, 5, 0);
                 }
                 document.getElementById("cords").textContent = "cords: " + Math.round(player.position.x) + ", " + Math.round(player.position.y) + ", " + Math.round(player.position.z);
                 const radius = 5;
