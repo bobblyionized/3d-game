@@ -8,7 +8,7 @@
             #chatArea { color: white; bottom: 25px; left: 0px; height: 400px; width: 400px; overflow-y: hidden; position: absolute; }
             #chatInput { position: absolute; left: 0px; bottom: 0px; width: 400px; }
             #leaderboardSlot { z-index: 10; background-color: gray; display: inline-block; padding: 5px; width: 150px; text-align: center; margin: 5px; }
-            #leaderboard { transition: 0.5s ease; background-color: #808080e3; }
+            #leaderboard { transition: 0.5s ease; background-color: #808080e3; margin: 5px; }
         </style>
     </head>
     <body>
@@ -49,7 +49,8 @@
             let currentPlayerRef = ref(database, "players/" + playerID);
             let objects = [];
             const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            let FOV = 75;
+            let camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.getElementById("game").appendChild(renderer.domElement);
@@ -89,7 +90,6 @@
                 }
                 if (event.key == "Tab") {
                     event.preventDefault();
-                    console.log("tab");
                     let leaderboard = document.getElementById("leaderboard");
                     if (leaderboard.style.transform == "translateX(175px)") {
                         leaderboard.style.transform = "translateX(0px)";
@@ -261,6 +261,7 @@
                 message.textContent = data.username + ": " + data.message;
                 message.style.margin = "5px";
                 message.style.color = "white";
+                message.id = "messageP";
                 if (data.username == "System") {
                     message.style.fontStyle = "italic";
                 }
@@ -276,7 +277,9 @@
                 chatArea.appendChild(message);
             });
             let radius = 5;
+            let objectsClose = 0;
             function gameLoop() {
+                objectsClose = 0;
                 document.getElementById("game").style.display = "block";
                 document.getElementById("usernameInput").style.display = "none";
                 const forward = new THREE.Vector3();
@@ -303,8 +306,11 @@
                         player.userData.lastObjectTime = Date.now();
                     }
                     if (keys['m']) { set(objectRef, null); }
-                    if (keys['-']) { radius += 0.1; }
-                    if (keys['=']) { radius -= 0.1; }
+                    if (keys['-']) { FOV += 0.5; }
+                    if (keys['=']) { FOV -= 0.5; }
+                    if (keys['k']) {
+                        renderer.shadowMap.enabled = !renderer.shadowMap.enabled;
+                    }
                 }
                 player.position.add(movement);
                 velocityY -= gravity;
@@ -319,11 +325,15 @@
                 camera.position.copy(player.position).add(cameraOffset);
                 camera.lookAt(player.position);
                 renderer.render(scene, camera);
+                camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, 0.1, 1000);
                 requestAnimationFrame(gameLoop);
                 getPlayers();
                 getObjects();
                 for (let object of objects) {
-                    handleCollisions(object);
+                    if (player.position.distanceTo(object.position) < 30) {
+                        handleCollisions(object);
+                        objectsClose++;
+                    }
                 }
                 if (counter > 5) {
                     counter = 0;
