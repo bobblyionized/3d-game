@@ -5,7 +5,7 @@
             #cords { position: absolute; margin: 0px; top: 0px; color: white; background-color: black; }
             #objectCount { position: absolute; top: 5px; color: white; background-color: black; }
             #playerCount { position: absolute; top: 26px; color: white; background-color: black; }
-            #chatArea { color: white; bottom: 25px; left: 0px; height: 400px; width: 400px; overflow-y: scroll; position: absolute; }
+            #chatArea { color: white; bottom: 25px; left: 0px; height: 400px; width: 400px; overflow-y: hidden; position: absolute; }
             #chatInput { position: absolute; left: 0px; bottom: 0px; width: 400px; }
         </style>
     </head>
@@ -16,6 +16,7 @@
             <p id="playerCount">players: 0</p>
             <div id="chatArea"></div>
             <input type="text" id="chatInput" placeholder="press enter to message">
+
         </div>
         <div id="usernameInput">
             <input onkeydown="return /[a-z0-9!@#$%^&*(){}:;<,>.?/|]/i.test(event.key)" maxlength="50" type="text" id="username" placeholder="enter username">
@@ -63,7 +64,7 @@
             scene.add(ground);
             objects.push(ground);
             const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
-            const cubeMaterial = new THREE.MeshBasicMaterial({ color: "rgb(255, 255, 255)" });
+            let cubeMaterial = new THREE.MeshBasicMaterial({ color: "rgb(255, 255, 255)" });
             let cooldown = 500;
             document.addEventListener('keydown', (event) => { 
                 keys[event.key] = true; 
@@ -79,6 +80,9 @@
                         chatInput.value = "";
                         chatInput.lastMessageTime = Date.now();
                         set(messageRef, null);
+                        chatInput.blur()
+                        chatArea.scrollTop = chatArea.scrollHeight;
+                        document.body.requestPointerLock();
                     }
                 }
             });
@@ -210,6 +214,7 @@
                             if (existingObject) {
                                 existingObject.position.set(data[key].x, data[key].y, data[key].z);
                             } else {
+                                cubeMaterial = new THREE.MeshBasicMaterial({ color: data[key].color });
                                 const newObject = new THREE.Mesh(cubeGeometry, cubeMaterial);
                                 newObject.position.set(data[key].x, data[key].y, data[key].z);
                                 newObject.userData.id = key;
@@ -263,21 +268,24 @@
                 const direction = new THREE.Vector3(Math.sin(cameraAngleX), 0, Math.cos(cameraAngleX));
                 const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
                 let movement = new THREE.Vector3(0, 0, 0);
-                if (keys['s']) player.position.add(direction.clone().multiplyScalar(moveSpeed));
-                if (keys['w']) player.position.add(direction.clone().multiplyScalar(-moveSpeed));
-                if (keys['d']) player.position.add(right.clone().multiplyScalar(-moveSpeed));
-                if (keys['a']) player.position.add(right.clone().multiplyScalar(moveSpeed));
-                if (keys[' '] && !isJumping) { velocityY = jumpStrength; isJumping = true; }
-                if (keys['r']) { player.position.x = 0; player.position.y = 5; player.position.z = 0; }
-                if (keys['z'] && (!player.userData.lastObjectTime || Date.now() - player.userData.lastObjectTime > objectCooldown)) {
-                    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-                    cube.position.set(player.position.x, player.position.y - 1.51, player.position.z);
-                    scene.add(cube);
-                    objects.push(cube);
-                    push(objectRef, { x: cube.position.x, y: cube.position.y, z: cube.position.z });
-                    player.userData.lastObjectTime = Date.now();
+                if (document.activeElement != document.getElementById("chatInput")) {
+                    if (keys['s']) player.position.add(direction.clone().multiplyScalar(moveSpeed));
+                    if (keys['w']) player.position.add(direction.clone().multiplyScalar(-moveSpeed));
+                    if (keys['d']) player.position.add(right.clone().multiplyScalar(-moveSpeed));
+                    if (keys['a']) player.position.add(right.clone().multiplyScalar(moveSpeed));
+                    if (keys[' '] && !isJumping) { velocityY = jumpStrength; isJumping = true; }
+                    if (keys['r']) { player.position.x = 0; player.position.y = 5; player.position.z = 0; }
+                    if (keys['c'] && (!player.userData.lastObjectTime || Date.now() - player.userData.lastObjectTime > objectCooldown)) {
+                        let color = "rgb(" + Math.floor(Math.random() * 256) + ", " + Math.floor(Math.random() * 256) + ", " + Math.floor(Math.random() * 256) + ")";
+                        push(objectRef, { x: player.position.x, y: player.position.y - 1.51, z: player.position.z, color: color });
+                        player.userData.lastObjectTime = Date.now();
+                    }
+                    if (keys['z'] && (!player.userData.lastObjectTime || Date.now() - player.userData.lastObjectTime > objectCooldown)) {
+                        push(objectRef, { x: player.position.x, y: player.position.y - 1.51, z: player.position.z, color: "white" });
+                        player.userData.lastObjectTime = Date.now();
+                    }
+                    if (keys['m']) { set(objectRef, null); }
                 }
-                if (keys['m']) { set(objectRef, null); }
                 player.position.add(movement);
                 velocityY -= gravity;
                 player.position.y += velocityY;
