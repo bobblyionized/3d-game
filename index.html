@@ -5,8 +5,8 @@
             #cords { position: absolute; margin: 0px; top: 0px; color: white; background-color: black; }
             #objectCount { position: absolute; top: 5px; color: white; background-color: black; }
             #playerCount { position: absolute; top: 26px; color: white; background-color: black; }
-            #chatArea { color: white; bottom: 25px; left: 0px; height: 400px; width: 400px; overflow-y: hidden; position: absolute; }
-            #chatInput { position: absolute; left: 0px; bottom: 0px; width: 400px; }
+            #chatArea { background-color: rgba(0, 0, 0, 0.5); border: solid; color: white; bottom: 25px; left: 0px; height: 350px; width: 400px; overflow-y: hidden; position: absolute; }
+            #chatInput { position: absolute; left: 0px; bottom: 0px; width: 407px; }
             #leaderboardSlot { z-index: 10; background-color: gray; display: inline-block; padding: 5px; width: 150px; text-align: center; margin: 5px; }
             #leaderboard { transition: 0.5s ease; background-color: #808080e3; margin: 5px; }
         </style>
@@ -17,7 +17,7 @@
             <p id="objectCount">objects: 0</p>
             <p id="playerCount">players: 0</p>
             <div id="chatArea"></div>
-            <input type="text" id="chatInput" placeholder="press enter to message">
+            <input maxlength="100" type="text" id="chatInput" placeholder="press enter to message">
             <div id="leaderboard" style="position: absolute; right: 0px;"></div>
         </div>
         <div id="usernameInput">
@@ -308,9 +308,6 @@
                     if (keys['m']) { set(objectRef, null); }
                     if (keys['-']) { FOV += 0.5; }
                     if (keys['=']) { FOV -= 0.5; }
-                    if (keys['k']) {
-                        renderer.shadowMap.enabled = !renderer.shadowMap.enabled;
-                    }
                 }
                 player.position.add(movement);
                 velocityY -= gravity;
