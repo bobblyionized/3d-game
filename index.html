@@ -2,10 +2,11 @@
     <head>
         <style>
             html, body { margin: 0; overflow: hidden; }
-            #cords { position: absolute; margin: 0px; top: 0px; color: white; }
-            #objectCount { position: absolute; top: 5px; color: white; }
-            #playerCount { position: absolute; top: 26px; color: white; }
-            p { background-color: black; }
+            #cords { position: absolute; margin: 0px; top: 0px; color: white; background-color: black; }
+            #objectCount { position: absolute; top: 5px; color: white; background-color: black; }
+            #playerCount { position: absolute; top: 26px; color: white; background-color: black; }
+            #chatArea { color: white; bottom: 25px; left: 0px; height: 400px; width: 400px; overflow-y: scroll; position: absolute; }
+            #chatInput { position: absolute; left: 0px; bottom: 0px; width: 400px; }
         </style>
     </head>
     <body>
@@ -13,6 +14,8 @@
             <p id="cords">cords: 0, 0, 0</p>
             <p id="objectCount">objects: 0</p>
             <p id="playerCount">players: 0</p>
+            <div id="chatArea"></div>
+            <input type="text" id="chatInput" placeholder="press enter to message">
         </div>
         <div id="usernameInput">
             <input onkeydown="return /[a-z0-9!@#$%^&*(){}:;<,>.?/|]/i.test(event.key)" maxlength="50" type="text" id="username" placeholder="enter username">
@@ -38,6 +41,7 @@
             let playerRef = ref(database, "players/");
             set(playerRef, null);
             let objectRef = ref(database, "objects/");
+            let messageRef = ref(database, "messages/");
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let currentPlayerRef = ref(database, "players/" + playerID);
             let objects = [];
@@ -60,7 +64,24 @@
             objects.push(ground);
             const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
             const cubeMaterial = new THREE.MeshBasicMaterial({ color: "rgb(255, 255, 255)" });
-            document.addEventListener('keydown', (event) => { keys[event.key] = true; });
+            let cooldown = 500;
+            document.addEventListener('keydown', (event) => { 
+                keys[event.key] = true; 
+                const chatInput = document.getElementById("chatInput");
+                if (event.key == "Enter") {
+                    if (chatInput.value == "") {
+                        chatInput.focus();
+                        return;
+                    }
+                    const chatArea = document.getElementById("chatArea");
+                    if (!chatInput.lastMessageTime || Date.now() - chatInput.lastMessageTime > cooldown) {
+                        push(messageRef, { username: document.getElementById("username").value, message: chatInput.value });
+                        chatInput.value = "";
+                        chatInput.lastMessageTime = Date.now();
+                        set(messageRef, null);
+                    }
+                }
+            });
             document.addEventListener('keyup', (event) => { delete keys[event.key]; });
             let cameraAngleX = 0;
             let cameraAngleY = 0;
@@ -87,6 +108,8 @@
                 pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value };
                 set(currentPlayerRef, pos);
                 gameLoop();
+                push(messageRef, { username: "System", message: document.getElementById("username").value + " has joined the game" });
+                set(messageRef, null);
             });
             function checkCollision(object1, object2) {
                 const object1Box = new THREE.Box3().setFromObject(object1);
@@ -169,6 +192,13 @@
                 return canvas;
             }
             let objectCount = 0;
+            const spriteMaterial = new THREE.SpriteMaterial({ 
+                map: new THREE.CanvasTexture(makeText(document.getElementById("username").value)), 
+                transparent: true 
+            });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(2, 1, 1);
+            sprite.position.set(0, 1, 0);
             function getObjects() {
                 objectCount = 0;
                 get(objectRef).then((snapshot) => {
@@ -202,6 +232,27 @@
             let counter = 0;
             let objectCooldown = 500;
             onDisconnect(currentPlayerRef).remove();
+            onChildAdded(messageRef, (snapshot) => {
+                const data = snapshot.val();
+                const chatArea = document.getElementById("chatArea");
+                const message = document.createElement("p");
+                message.textContent = data.username + ": " + data.message;
+                message.style.margin = "5px";
+                message.style.color = "white";
+                if (data.username == "System") {
+                    message.style.fontStyle = "italic";
+                }
+                if (data.message.includes("/playsound ")) {
+                    let command = data.message.split(' ');
+                    let sound = command[1];
+                    let audioElement = document.createElement("audio");
+                    audioElement.src = "https://raw.githubusercontent.com/seaotter6382/seaotter6382.github.io/refs/heads/main/sounds/" + sound + ".mp3";
+                    audioElement.autoplay = true;
+                    document.body.appendChild(audioElement);
+                }
+                chatArea.scrollTop = chatArea.scrollHeight;
+                chatArea.appendChild(message);
+            });
             function gameLoop() {
                 document.getElementById("game").style.display = "block";
                 document.getElementById("usernameInput").style.display = "none";
