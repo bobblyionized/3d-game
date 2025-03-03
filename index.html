@@ -100,7 +100,6 @@
             document.addEventListener('mousemove', (event) => {
                 cameraAngleX -= event.movementX * 0.005;
                 cameraAngleY -= event.movementY * 0.005;
-                cameraAngleY = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, cameraAngleY));
             });
             document.body.addEventListener('click', () => {
                 if (document.getElementById("usernameInput").style.display == "none") {
@@ -268,7 +267,7 @@
                 const direction = new THREE.Vector3(Math.sin(cameraAngleX), 0, Math.cos(cameraAngleX));
                 const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
                 let movement = new THREE.Vector3(0, 0, 0);
-                if (document.activeElement != document.getElementById("chatInput")) {
+                if (document.getElementById("chatInput").value == "") {
                     if (keys['s']) player.position.add(direction.clone().multiplyScalar(moveSpeed));
                     if (keys['w']) player.position.add(direction.clone().multiplyScalar(-moveSpeed));
                     if (keys['d']) player.position.add(right.clone().multiplyScalar(-moveSpeed));
