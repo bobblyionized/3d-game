@@ -5,10 +5,14 @@
             #cords { position: absolute; margin: 0px; top: 0px; color: white; background-color: black; }
             #objectCount { position: absolute; top: 5px; color: white; background-color: black; }
             #playerCount { position: absolute; top: 26px; color: white; background-color: black; }
-            #chatArea { background-color: rgba(0, 0, 0, 0.5); border: solid; color: white; bottom: 25px; left: 0px; height: 350px; width: 400px; overflow-y: hidden; position: absolute; }
-            #chatInput { position: absolute; left: 0px; bottom: 0px; width: 407px; }
+            #chatArea { background-color: rgba(0, 0, 0, 0.5); border: solid 1px; color: white; bottom: 25px; left: 0px; height: 45%; width: 27%; overflow-y: hidden; position: absolute; }
+            #chatInput { position: absolute; left: 0px; bottom: 0px; width: 27.2%; }
             #leaderboardSlot { z-index: 10; background-color: gray; display: inline-block; padding: 5px; width: 150px; text-align: center; margin: 5px; }
             #leaderboard { transition: 0.5s ease; background-color: #808080e3; margin: 5px; }
+            #blockPicker { transition: 0.55s ease; transform: translateY(100px); position: absolute; height: 1000px; width: 1000px; left: 40%; top: 91%; }
+            #blockPickerBase { background-color: gray; height: 7.5%; width: 30%; border-radius: 5px; border: #525252 solid 2px; }
+            #blockPickerTop { color: white; position: relative; top: -103px; height: 25px; width: 20%; background-color: black; border-radius: 5px 5px 0px 0px; left: 45px; }
+            #square { height: 50px; width: 50px; margin: 10px; border: black solid 2px; display: inline-block; text-align: center; font-size: 35px; }
         </style>
     </head>
     <body>
@@ -19,6 +23,16 @@
             <div id="chatArea"></div>
             <input maxlength="100" type="text" id="chatInput" placeholder="press enter to message">
             <div id="leaderboard" style="position: absolute; right: 0px;"></div>
+            <div id="blockPicker">
+                <div id="blockPickerBase">
+                    <div class="square1" id="square" style="background-color: red; margin-right: 1px; margin-left: 1px;">1</div>
+                    <div class="square2" id="square" style="background-color: orange; margin-left: 1px; margin-right: 1px;">2</div>
+                    <div class="square3" id="square" style="background-color: yellow; margin-left: 1px; margin-right: 1px;">3</div>
+                    <div class="square4" id="square" style="background-color: green; margin-left: 1px; margin-right: 1px;">4</div>
+                    <div class="square5" id="square" style="color: white; background-color: black; margin-left: 1px; margin-right: 1px;">5</div>
+                </div>
+                <div id="blockPickerTop"><- Q<span style="margin-left: 40px;">Colors<span style="margin-left: 50px;">E -></div>
+            </div>
         </div>
         <div id="usernameInput">
             <input onkeydown="return /[a-z0-9!@#$%^&*(){}:;<,>.?/|]/i.test(event.key)" maxlength="50" type="text" id="username" placeholder="enter username">
@@ -45,6 +59,7 @@
             set(playerRef, null);
             let objectRef = ref(database, "objects/");
             let messageRef = ref(database, "messages/");
+            let terrainRef = ref(database, "terrain/");
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let currentPlayerRef = ref(database, "players/" + playerID);
             let objects = [];
@@ -59,11 +74,13 @@
             const otherPlayerMaterial = new THREE.MeshBasicMaterial({ color: "red" });
             const player = new THREE.Mesh(playerGeometry, playerMaterial);
             player.position.set(0, 5, 0);
+            scene.background = new THREE.Color("rgb(135, 207, 235)");
             scene.add(player);
-            const groundGeometry = new THREE.PlaneGeometry(30, 30);
+            const groundGeometry = new THREE.PlaneGeometry(1500, 1500);
             const groundMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide });
             const ground = new THREE.Mesh(groundGeometry, groundMaterial);
             ground.rotation.x = -Math.PI / 2;
+            ground.name = "ground";
             scene.add(ground);
             objects.push(ground);
             const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
@@ -102,7 +119,7 @@
             let cameraAngleX = 0;
             let cameraAngleY = 0;
             let isMouseDown = true;
-            const moveSpeed = 0.1;
+            let moveSpeed = 0.1;
             const keys = {};
             const jumpStrength = 0.3;
             const gravity = 0.01;
@@ -220,7 +237,7 @@
             const sprite = new THREE.Sprite(spriteMaterial);
             sprite.scale.set(2, 1, 1);
             sprite.position.set(0, 1, 0);
-            function getObjects() {
+            function getObjects(close) {
                 objectCount = 0;
                 get(objectRef).then((snapshot) => {
                     if (snapshot.exists()) {
@@ -239,7 +256,7 @@
                                 objects.push(newObject);
                             }
                         }
-                        document.getElementById("objectCount").textContent = "objects: " + objectCount;
+                        document.getElementById("objectCount").textContent = "objects: " + objectCount + " (" + close + ")";
                     }
                 });
                 onChildRemoved(objectRef, (snapshot) => {
@@ -251,8 +268,43 @@
                     }
                 });
             }
-            let counter = 0;
-            let objectCooldown = 500;
+            function getTerrain() {
+                get(terrainRef).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        for (let key in data) {
+                            const terrainGeometry = new THREE.BoxGeometry(data[key].width, data[key].height, data[key].length);
+                            const terrainMaterial = new THREE.MeshBasicMaterial({ color: data[key].color });
+                            const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+                            terrain.name = "terrain";
+                            terrain.position.set(data[key].x, data[key].y, data[key].z);
+                            objects.push(terrain);
+                            scene.add(terrain);
+                        }
+                    } else {
+                        for (let i = 0; i < 200; i++) {
+                            let pick = Math.floor(Math.random() * 4) + 1;
+                            let c;
+                            if (pick > 3) {
+                                c = "rgb(143, 143, 143)"
+                            } else {
+                                c = "rgb(" + Math.floor(Math.random() * 151) + ", " + (Math.floor(Math.random() * (200 - 138 + 1)) + 138) + ", 0)"
+                            }
+                            let terrainData = {
+                                x: Math.random() * 2000 - 1000,
+                                y: 0,
+                                z: Math.random() * 2000 - 1000,
+                                width: Math.random() * 90 + 10,
+                                height: Math.random() * 90 + 10,
+                                length: Math.random() * 90 + 10,
+                                color: c
+                            };
+                            push(terrainRef, terrainData);
+                        }
+                    }
+                });
+            }
+            getTerrain();
             onDisconnect(currentPlayerRef).remove();
             onChildAdded(messageRef, (snapshot) => {
                 const data = snapshot.val();
@@ -278,6 +330,11 @@
             });
             let radius = 5;
             let objectsClose = 0;
+            let objectPicker = false;
+            let counter = 0;
+            let a = 500;
+            let currentColor = "rgb(255, 255, 255)";
+            let pickLayer = 1;
             function gameLoop() {
                 objectsClose = 0;
                 document.getElementById("game").style.display = "block";
@@ -296,18 +353,29 @@
                     if (keys['a']) player.position.add(right.clone().multiplyScalar(moveSpeed));
                     if (keys[' '] && !isJumping) { velocityY = jumpStrength; isJumping = true; }
                     if (keys['r']) { player.position.x = 0; player.position.y = 5; player.position.z = 0; }
-                    if (keys['c'] && (!player.userData.lastObjectTime || Date.now() - player.userData.lastObjectTime > objectCooldown)) {
-                        let color = "rgb(" + Math.floor(Math.random() * 256) + ", " + Math.floor(Math.random() * 256) + ", " + Math.floor(Math.random() * 256) + ")";
-                        push(objectRef, { x: player.position.x, y: player.position.y - 1.51, z: player.position.z, color: color });
-                        player.userData.lastObjectTime = Date.now();
-                    }
-                    if (keys['z'] && (!player.userData.lastObjectTime || Date.now() - player.userData.lastObjectTime > objectCooldown)) {
-                        push(objectRef, { x: player.position.x, y: player.position.y - 1.51, z: player.position.z, color: "white" });
+                    if (keys['c'] && (!player.userData.lastObjectTime || Date.now() - player.userData.lastObjectTime > a)) {
+                        if (currentColor == "random") {
+                            push(objectRef, { x: player.position.x, y: player.position.y - 1.51, z: player.position.z, color: "rgb(" + Math.floor(Math.random() * 256) + ", " + Math.floor(Math.random() * 256) + ", " + Math.floor(Math.random() * 256) + ")" });
+                        } else {
+                            push(objectRef, { x: player.position.x, y: player.position.y - 1.51, z: player.position.z, color: currentColor });
+                        }
                         player.userData.lastObjectTime = Date.now();
                     }
                     if (keys['m']) { set(objectRef, null); }
                     if (keys['-']) { FOV += 0.5; }
                     if (keys['=']) { FOV -= 0.5; }
+                    if (keys['x']) {
+                        delete keys['x'];
+                        objectPicker = !objectPicker;
+                        console.log("opened menu");
+                    }
+                    if (keys['e']) { if (pickLayer == 1) { pickLayer = 2; }}
+                    if (keys['q']) { if (pickLayer == 2) { pickLayer = 1; }}
+                    if (keys['1'] && objectPicker) { delete keys['1']; currentColor = currentColor == "rgb(255, 0, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 0, 0)"; }
+                    if (keys['2'] && objectPicker) { delete keys['2']; currentColor = currentColor == "rgb(255, 165, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 165, 0)"; }
+                    if (keys['3'] && objectPicker) { delete keys['3']; currentColor = currentColor == "rgb(255, 255, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 255, 0)"; }
+                    if (keys['4'] && objectPicker) { delete keys['4']; currentColor = currentColor == "rgb(0, 128, 0)" ? "rgb(255, 255, 255)" : "rgb(0, 128, 0)"; }
+                    if (keys['5'] && objectPicker) { delete keys['5']; currentColor = currentColor == "random" ? "rgb(255, 255, 255)" : "random"; }
                 }
                 player.position.add(movement);
                 velocityY -= gravity;
@@ -317,6 +385,45 @@
                     player.position.y = 5;
                     player.position.z = 0;
                 }
+                document.querySelectorAll('#square').forEach(square => {
+                    square.style.boxShadow = "none";
+                });
+                if (currentColor == "rgb(255, 0, 0)") {
+                    document.querySelector('.square1').style.boxShadow = "0 0 10px 5px white";
+                }
+                if (currentColor == "rgb(255, 165, 0)") {
+                    document.querySelector('.square2').style.boxShadow = "0 0 10px 5px white";
+                }
+                if (currentColor == "rgb(255, 255, 0)") {
+                    document.querySelector('.square3').style.boxShadow = "0 0 10px 5px white";
+                }
+                if (currentColor == "rgb(0, 128, 0)") {
+                    document.querySelector('.square4').style.boxShadow = "0 0 10px 5px white";
+                }
+                if (currentColor == "random") {
+                    document.querySelector('.square5').style.boxShadow = "0 0 10px 5px white";
+                }
+                if (!objectPicker) {
+                    document.getElementById("blockPicker").style.transform = "translateY(10%)";
+                } else {
+                    document.getElementById("blockPicker").style.transform = "translateY(0%)";
+                }
+                if (pickLayer == 1) {
+                    document.getElementById("blockPickerTop").innerHTML = "<- Q<span style='margin-left: 40px;'>Colors</span><span style='margin-left: 50px;'>E -></span>"
+                    document.querySelector(".square1").style.display = "inline-block";
+                    document.querySelector(".square2").style.display = "inline-block";
+                    document.querySelector(".square3").style.display = "inline-block";
+                    document.querySelector(".square4").style.display = "inline-block";
+                    document.querySelector(".square5").style.display = "inline-block";
+                }
+                if (pickLayer == 2) {
+                    document.getElementById("blockPickerTop").innerHTML = "<- Q<span style='margin-left: 40px;'>Blocks</span><span style='margin-left: 50px;'>E -></span>"
+                    document.querySelector(".square1").style.display = "none";
+                    document.querySelector(".square2").style.display = "none";
+                    document.querySelector(".square3").style.display = "none";
+                    document.querySelector(".square4").style.display = "none";
+                    document.querySelector(".square5").style.display = "none";
+                }
                 document.getElementById("cords").textContent = "cords: " + Math.round(player.position.x) + ", " + Math.round(player.position.y) + ", " + Math.round(player.position.z);
                 let cameraOffset = new THREE.Vector3(Math.sin(cameraAngleX) * radius, 3 + Math.sin(cameraAngleY) * 4, Math.cos(cameraAngleX) * radius);
                 camera.position.copy(player.position).add(cameraOffset);
@@ -325,13 +432,16 @@
                 camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, 0.1, 1000);
                 requestAnimationFrame(gameLoop);
                 getPlayers();
-                getObjects();
                 for (let object of objects) {
-                    if (player.position.distanceTo(object.position) < 30) {
+                    if (player.position.distanceTo(object.position) < 30 || object.name == "ground" && object.name != "terrain") {
                         handleCollisions(object);
                         objectsClose++;
                     }
+                    if (object.name == "terrain") {
+                        handleCollisions(object);
+                    }
                 }
+                getObjects(objectsClose - 1);
                 if (counter > 5) {
                     counter = 0;
                     pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value };
