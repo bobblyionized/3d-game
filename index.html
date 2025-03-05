@@ -9,7 +9,7 @@
             #chatInput { position: absolute; left: 0px; bottom: 0px; width: 27.2%; }
             #leaderboardSlot { z-index: 10; background-color: gray; display: inline-block; padding: 5px; width: 150px; text-align: center; margin: 5px; }
             #leaderboard { transition: 0.5s ease; background-color: #808080e3; margin: 5px; }
-            #blockPicker { transition: 0.55s ease; transform: translateY(100px); position: absolute; height: 1000px; width: 1000px; left: 40%; bottom: -12.5%; }
+            #blockPicker { transition: 0.55s ease; transform: translateY(100px); position: absolute; height: 1000px; width: 1000px; left: 40%; top: -13%; }
             #blockPickerBase { background-color: gray; height: 7.5%; width: 30%; border-radius: 5px; border: #525252 solid 2px; }
             #blockPickerTop { color: white; position: relative; top: 0px; height: 25px; width: 20%; background-color: black; border-radius: 0px 0px 5px 5px; left: 45px; }
             #square { height: 50px; width: 50px; margin: 10px; border: black solid 2px; display: inline-block; text-align: center; font-size: 35px; }
@@ -105,6 +105,7 @@
                         chatInput.value = "";
                         chatInput.lastMessageTime = Date.now();
                         set(messageRef, null);
+                        keys = {};
                         chatInput.blur()
                         chatArea.scrollTop = chatArea.scrollHeight;
                         document.body.requestPointerLock();
@@ -380,8 +381,8 @@
                         delete keys['x'];
                         objectPicker = !objectPicker;
                     }
-                    if (keys['e']) { if (pickLayer == 1) { pickLayer = 2; }}
-                    if (keys['q']) { if (pickLayer == 2) { pickLayer = 1; }}
+                    if (keys['e'] && objectPicker) { if (pickLayer == 1) { pickLayer = 2; }}
+                    if (keys['q'] && objectPicker) { if (pickLayer == 2) { pickLayer = 1; }}
                     if (keys['1'] && objectPicker && pickLayer == 1) { delete keys['1']; currentColor = currentColor == "rgb(255, 0, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 0, 0)"; }
                     if (keys['2'] && objectPicker && pickLayer == 1) { delete keys['2']; currentColor = currentColor == "rgb(255, 165, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 165, 0)"; }
                     if (keys['3'] && objectPicker && pickLayer == 1) { delete keys['3']; currentColor = currentColor == "rgb(255, 255, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 255, 0)"; }
@@ -415,9 +416,9 @@
                     document.querySelector('.square5').style.boxShadow = "0 0 10px 5px white";
                 }
                 if (!objectPicker) {
-                    document.getElementById("blockPicker").style.transform = "translateY(0%)";
+                    document.getElementById("blockPicker").style.top = "-210px";
                 } else {
-                    document.getElementById("blockPicker").style.transform = "translateY(10%)";
+                    document.getElementById("blockPicker").style.top = "-105px";
                 }
                 if (pickLayer == 1) {
                     document.getElementById("blockPickerTop").innerHTML = "<- Q<span style='margin-left: 40px;'>Colors</span><span style='margin-left: 32px;'>E -></span>"
