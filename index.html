@@ -81,7 +81,7 @@
             player.position.set(0, 5, 0);
             scene.background = new THREE.Color("rgb(135, 207, 235)");
             scene.add(player);
-            const groundGeometry = new THREE.PlaneGeometry(1500, 1500);
+            const groundGeometry = new THREE.PlaneGeometry(3000, 3000);
             const groundMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide });
             const ground = new THREE.Mesh(groundGeometry, groundMaterial);
             ground.rotation.x = -Math.PI / 2;
@@ -295,20 +295,23 @@
                             scene.add(terrain);
                         }
                     } else {
-                        for (let i = 0; i < 200; i++) {
+                        for (let i = 0; i < 300; i++) {
                             let pick = Math.floor(Math.random() * 4) + 1;
                             let c;
+                            let he = Math.random() * 90 + 10;
                             if (pick > 3) {
-                                c = "rgb(143, 143, 143)"
+                                let r =  Math.floor(Math.random() * (200 - 80 + 1)) + 80;
+                                c = "rgb(" + r + ", " + r + ", " + r + ")";
+                                he = Math.random() * 240 + 50;
                             } else {
-                                c = "rgb(" + Math.floor(Math.random() * 151) + ", " + (Math.floor(Math.random() * (200 - 138 + 1)) + 138) + ", 0)"
+                                c = "rgb(" + Math.floor(Math.random() * 151) + ", " + (Math.floor(Math.random() * (200 - 137)) + 138) + ", 0)"
                             }
                             let terrainData = {
                                 x: Math.random() * 2000 - 1000,
                                 y: 0,
                                 z: Math.random() * 2000 - 1000,
                                 width: Math.random() * 90 + 10,
-                                height: Math.random() * 90 + 10,
+                                height: he,
                                 length: Math.random() * 90 + 10,
                                 color: c
                             };
