@@ -9,11 +9,10 @@
             #chatInput { position: absolute; left: 0px; bottom: 0px; width: 27.2%; }
             #leaderboardSlot { z-index: 10; background-color: gray; display: inline-block; padding: 5px; width: 150px; text-align: center; margin: 5px; }
             #leaderboard { transition: 0.5s ease; background-color: #808080e3; margin: 5px; }
-            #blockPicker { transition: 0.55s ease; transform: translateY(100px); position: absolute; height: 1000px; width: 1000px; left: 40%; top: 91%; }
+            #blockPicker { transition: 0.55s ease; transform: translateY(100px); position: absolute; height: 1000px; width: 1000px; left: 40%; bottom: -12.5%; }
             #blockPickerBase { background-color: gray; height: 7.5%; width: 30%; border-radius: 5px; border: #525252 solid 2px; }
-            #blockPickerTop { color: white; position: relative; top: -103px; height: 25px; width: 20%; background-color: black; border-radius: 5px 5px 0px 0px; left: 45px; }
+            #blockPickerTop { color: white; position: relative; top: 0px; height: 25px; width: 20%; background-color: black; border-radius: 0px 0px 5px 5px; left: 45px; }
             #square { height: 50px; width: 50px; margin: 10px; border: black solid 2px; display: inline-block; text-align: center; font-size: 35px; }
-
             #username { left: 45%; top: 50%; transform: translate(-50%, -50%); position: absolute; }
             #startButton { transition: 0.25s ease; left: 57.5%; top: 50%; transform: translate(-50%, -50%); position: absolute; border: 3px solid #006500; color: white; padding: 10px; font-size: 20px; border-radius: 10px; background-color: green; }
             #startButton:hover { cursor: pointer; transform: scale(1.1) translate(-45%, -45%); }
@@ -35,8 +34,9 @@
                     <div class="square3" id="square" style="background-color: yellow; margin-left: 1px; margin-right: 1px;">3</div>
                     <div class="square4" id="square" style="background-color: green; margin-left: 1px; margin-right: 1px;">4</div>
                     <div class="square5" id="square" style="color: white; background-color: black; margin-left: 1px; margin-right: 1px;">5</div>
+                    <div class="square6" id="square" style="background-color: white; margin-left: 1px; margin-right: 1px;">1</div>
                 </div>
-                <div id="blockPickerTop"><- Q<span style="margin-left: 40px;">Colors<span style="margin-left: 50px;">E -></div>
+                <div id="blockPickerTop"><- Q<span style="margin-left: 40px;">Colors<span style="margin-left: 40px;">E -></div>
             </div>
         </div>
         <div id="usernameInput">
@@ -139,6 +139,10 @@
                 if (document.getElementById("usernameInput").style.display == "none") {
                     document.body.requestPointerLock();
                 }
+            });
+            window.addEventListener('beforeunload', (event) => {
+                push(messageRef, { username: "System", message: document.getElementById("username").value + " has left the game" });
+                set(messageRef, null);
             });
             document.getElementById("startButton").addEventListener('click', () => {
                 if (document.getElementById("username").value == "") return;
@@ -262,6 +266,9 @@
                             }
                         }
                         document.getElementById("objectCount").textContent = "objects: " + objectCount + " (" + close + ")";
+                        if (objectCount > 1000) { 
+                            set(objectRef, null);
+                        }
                     }
                 });
                 onChildRemoved(objectRef, (snapshot) => {
@@ -322,7 +329,7 @@
                 if (data.username == "System") {
                     message.style.fontStyle = "italic";
                 }
-                if (data.message.includes("/playsound ")) {
+                if (data.message.includes("/playsound")) {
                     let command = data.message.split(' ');
                     let sound = command[1];
                     let audioElement = document.createElement("audio");
@@ -330,8 +337,8 @@
                     audioElement.autoplay = true;
                     document.body.appendChild(audioElement);
                 }
-                chatArea.scrollTop = chatArea.scrollHeight;
                 chatArea.appendChild(message);
+                chatArea.scrollTop = chatArea.scrollHeight;
             });
             let radius = 5;
             let objectsClose = 0;
@@ -339,6 +346,7 @@
             let counter = 0;
             let a = 500;
             let currentColor = "rgb(255, 255, 255)";
+            let currentBlock = "regular";
             let pickLayer = 1;
             function gameLoop() {
                 objectsClose = 0;
@@ -366,21 +374,19 @@
                         }
                         player.userData.lastObjectTime = Date.now();
                     }
-                    if (keys['m']) { set(objectRef, null); }
                     if (keys['-']) { FOV += 0.5; }
                     if (keys['=']) { FOV -= 0.5; }
                     if (keys['x']) {
                         delete keys['x'];
                         objectPicker = !objectPicker;
-                        console.log("opened menu");
                     }
                     if (keys['e']) { if (pickLayer == 1) { pickLayer = 2; }}
                     if (keys['q']) { if (pickLayer == 2) { pickLayer = 1; }}
-                    if (keys['1'] && objectPicker) { delete keys['1']; currentColor = currentColor == "rgb(255, 0, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 0, 0)"; }
-                    if (keys['2'] && objectPicker) { delete keys['2']; currentColor = currentColor == "rgb(255, 165, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 165, 0)"; }
-                    if (keys['3'] && objectPicker) { delete keys['3']; currentColor = currentColor == "rgb(255, 255, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 255, 0)"; }
-                    if (keys['4'] && objectPicker) { delete keys['4']; currentColor = currentColor == "rgb(0, 128, 0)" ? "rgb(255, 255, 255)" : "rgb(0, 128, 0)"; }
-                    if (keys['5'] && objectPicker) { delete keys['5']; currentColor = currentColor == "random" ? "rgb(255, 255, 255)" : "random"; }
+                    if (keys['1'] && objectPicker && pickLayer == 1) { delete keys['1']; currentColor = currentColor == "rgb(255, 0, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 0, 0)"; }
+                    if (keys['2'] && objectPicker && pickLayer == 1) { delete keys['2']; currentColor = currentColor == "rgb(255, 165, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 165, 0)"; }
+                    if (keys['3'] && objectPicker && pickLayer == 1) { delete keys['3']; currentColor = currentColor == "rgb(255, 255, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 255, 0)"; }
+                    if (keys['4'] && objectPicker && pickLayer == 1) { delete keys['4']; currentColor = currentColor == "rgb(0, 128, 0)" ? "rgb(255, 255, 255)" : "rgb(0, 128, 0)"; }
+                    if (keys['5'] && objectPicker && pickLayer == 1) { delete keys['5']; currentColor = currentColor == "random" ? "rgb(255, 255, 255)" : "random"; }
                 }
                 player.position.add(movement);
                 velocityY -= gravity;
@@ -409,25 +415,27 @@
                     document.querySelector('.square5').style.boxShadow = "0 0 10px 5px white";
                 }
                 if (!objectPicker) {
-                    document.getElementById("blockPicker").style.transform = "translateY(10%)";
-                } else {
                     document.getElementById("blockPicker").style.transform = "translateY(0%)";
+                } else {
+                    document.getElementById("blockPicker").style.transform = "translateY(10%)";
                 }
                 if (pickLayer == 1) {
-                    document.getElementById("blockPickerTop").innerHTML = "<- Q<span style='margin-left: 40px;'>Colors</span><span style='margin-left: 50px;'>E -></span>"
+                    document.getElementById("blockPickerTop").innerHTML = "<- Q<span style='margin-left: 40px;'>Colors</span><span style='margin-left: 32px;'>E -></span>"
                     document.querySelector(".square1").style.display = "inline-block";
                     document.querySelector(".square2").style.display = "inline-block";
                     document.querySelector(".square3").style.display = "inline-block";
                     document.querySelector(".square4").style.display = "inline-block";
                     document.querySelector(".square5").style.display = "inline-block";
+                    document.querySelector(".square6").style.display = 'none';
                 }
                 if (pickLayer == 2) {
-                    document.getElementById("blockPickerTop").innerHTML = "<- Q<span style='margin-left: 40px;'>Blocks</span><span style='margin-left: 50px;'>E -></span>"
+                    document.getElementById("blockPickerTop").innerHTML = "<- Q<span style='margin-left: 40px;'>Blocks</span><span style='margin-left: 32px;'>E -></span>"
                     document.querySelector(".square1").style.display = "none";
                     document.querySelector(".square2").style.display = "none";
                     document.querySelector(".square3").style.display = "none";
                     document.querySelector(".square4").style.display = "none";
                     document.querySelector(".square5").style.display = "none";
+                    document.querySelector(".square6").style.display = 'inline-block';
                 }
                 document.getElementById("cords").textContent = "cords: " + Math.round(player.position.x) + ", " + Math.round(player.position.y) + ", " + Math.round(player.position.z);
                 let cameraOffset = new THREE.Vector3(Math.sin(cameraAngleX) * radius, 3 + Math.sin(cameraAngleY) * 4, Math.cos(cameraAngleX) * radius);
