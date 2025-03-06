@@ -17,6 +17,8 @@
             #startButton { transition: 0.25s ease; left: 57.5%; top: 50%; transform: translate(-50%, -50%); position: absolute; border: 3px solid #006500; color: white; padding: 10px; font-size: 20px; border-radius: 10px; background-color: green; }
             #startButton:hover { cursor: pointer; transform: scale(1.1) translate(-45%, -45%); }
             #startButton:active { cursor: pointer; transform: scale(1.05) translate(-47.5%, -47.5%); }
+            #versionText { position: absolute; top: 0px; left: 50%; text-align: center; transform: translate(-50%, 1350%); }
+            #errorText { position: absolute; top: 0px; left: 50%; text-align: center; transform: translate(-50%, 1900%); color: red; display: none; }
         </style>
     </head>
     <body>
@@ -40,8 +42,10 @@
             </div>
         </div>
         <div id="usernameInput">
+            <p id="versionText">version 0.1</p>
             <input onkeydown="return /[a-z0-9!@#$%^&*(){}:;<,>.?/|]/i.test(event.key)" maxlength="50" type="text" id="username" placeholder="enter username">
             <button id="startButton">start</button>
+            <p id="errorText">get the new version bruh</p>
         </div>
         <script type="module">
             import * as THREE from './three.module.js';
@@ -67,6 +71,22 @@
             let terrainRef = ref(database, "terrain/");
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let currentPlayerRef = ref(database, "players/" + playerID);
+            let gameVersion = "0.1";
+            let isGoodVersion = false;
+            document.getElementById("versionText").textContent = "version " + gameVersion;
+            get(ref(database, '/version')).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const intValue = snapshot.val();
+                    if (gameVersion >= intValue) {
+                        document.getElementById("versionText").style.color = "green";
+                        document.getElementById("startButton").style.display = 'block';
+                        isGoodVersion = true;
+                    } else {
+                        document.getElementById("versionText").style.color = "red";
+                        document.getElementById("errorText").style.display = 'block';
+                    }
+                }
+            });
             let objects = [];
             const scene = new THREE.Scene();
             let FOV = 75;
@@ -147,6 +167,7 @@
             });
             document.getElementById("startButton").addEventListener('click', () => {
                 if (document.getElementById("username").value == "") return;
+                if (!isGoodVersion) return;
                 playerRef = ref(database, "players/");
                 pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value };
                 set(currentPlayerRef, pos);
