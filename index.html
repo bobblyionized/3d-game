@@ -69,6 +69,7 @@
             let objectRef = ref(database, "objects/");
             let messageRef = ref(database, "messages/");
             let terrainRef = ref(database, "terrain/");
+            let arrowRef = ref(database, "arrows/");
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let currentPlayerRef = ref(database, "players/" + playerID);
             let gameVersion = "0.1";
@@ -145,13 +146,12 @@
             let cameraAngleX = 0;
             let cameraAngleY = 0;
             let isMouseDown = true;
-            let moveSpeed = 0.1;
             let keys = {};
             const jumpStrength = 0.3;
             const gravity = 0.01;
             let velocityY = 0;
             let isJumping = false;
-            let pos = { x: player.position.x, y: player.position.y, z: player.position.z };
+            let pos = { x: player.position.x, y: player.position.y, z: player.position.z, speed: 0.1 };
             document.addEventListener('mousemove', (event) => {
                 cameraAngleX -= event.movementX * 0.0025;
                 cameraAngleY -= event.movementY * 0.0025;
@@ -192,10 +192,10 @@
                     } else {
                         const direction = new THREE.Vector3(Math.sin(cameraAngleX), 0, Math.cos(cameraAngleX));
                         const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
-                        if (keys['w']) player.position.add(direction.clone().multiplyScalar(moveSpeed));
-                        if (keys['s']) player.position.add(direction.clone().multiplyScalar(-moveSpeed));
-                        if (keys['d']) player.position.add(right.clone().multiplyScalar(moveSpeed));
-                        if (keys['a']) player.position.add(right.clone().multiplyScalar(-moveSpeed));
+                        if (keys['w']) player.position.add(direction.clone().multiplyScalar(pos.speed));
+                        if (keys['s']) player.position.add(direction.clone().multiplyScalar(-pos.speed));
+                        if (keys['d']) player.position.add(right.clone().multiplyScalar(pos.speed));
+                        if (keys['a']) player.position.add(right.clone().multiplyScalar(-pos.speed));
                     }
                 }
             }
@@ -373,6 +373,7 @@
             let currentColor = "rgb(255, 255, 255)";
             let currentBlock = "regular";
             let pickLayer = 1;
+            let arrowMode = false;
             function gameLoop() {
                 objectsClose = 0;
                 document.getElementById("game").style.display = "block";
@@ -385,10 +386,10 @@
                 const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
                 let movement = new THREE.Vector3(0, 0, 0);
                 if (document.getElementById("chatInput").value == "") {
-                    if (keys['s']) player.position.add(direction.clone().multiplyScalar(moveSpeed));
-                    if (keys['w']) player.position.add(direction.clone().multiplyScalar(-moveSpeed));
-                    if (keys['d']) player.position.add(right.clone().multiplyScalar(-moveSpeed));
-                    if (keys['a']) player.position.add(right.clone().multiplyScalar(moveSpeed));
+                    if (keys['s']) player.position.add(direction.clone().multiplyScalar(pos.speed));
+                    if (keys['w']) player.position.add(direction.clone().multiplyScalar(-pos.speed));
+                    if (keys['d']) player.position.add(right.clone().multiplyScalar(-pos.speed));
+                    if (keys['a']) player.position.add(right.clone().multiplyScalar(pos.speed));
                     if (keys[' '] && !isJumping) { velocityY = jumpStrength; isJumping = true; }
                     if (keys['r']) { player.position.x = 0; player.position.y = 5; player.position.z = 0; }
                     if (keys['c'] && (!player.userData.lastObjectTime || Date.now() - player.userData.lastObjectTime > a)) {
@@ -404,6 +405,11 @@
                     if (keys['x']) {
                         delete keys['x'];
                         objectPicker = !objectPicker;
+                    }
+                    if (keys['f']) {
+                        arrowMode = !arrowMode;
+                        console.log(!arrowMode + " " + arrowMode);
+                        delete keys['f'];
                     }
                     if (keys['e'] && objectPicker) { if (pickLayer == 1) { pickLayer = 2; }}
                     if (keys['q'] && objectPicker) { if (pickLayer == 2) { pickLayer = 1; }}
@@ -464,6 +470,9 @@
                 }
                 document.getElementById("cords").textContent = "cords: " + Math.round(player.position.x) + ", " + Math.round(player.position.y) + ", " + Math.round(player.position.z);
                 let cameraOffset = new THREE.Vector3(Math.sin(cameraAngleX) * radius, 3 + Math.sin(cameraAngleY) * 4, Math.cos(cameraAngleX) * radius);
+                if (arrowMode) {
+                    //cameraOffset.x += 2;
+                }
                 camera.position.copy(player.position).add(cameraOffset);
                 camera.lookAt(player.position);
                 renderer.render(scene, camera);
@@ -482,7 +491,7 @@
                 getObjects(objectsClose - 1);
                 if (counter > 5) {
                     counter = 0;
-                    pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value };
+                    pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value, speed: 0.1 };
                     set(currentPlayerRef, pos);
                 }
                 counter++;
