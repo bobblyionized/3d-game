@@ -19,6 +19,8 @@
             #startButton:active { cursor: pointer; transform: scale(1.05) translate(-47.5%, -47.5%); }
             #versionText { position: absolute; top: 0px; left: 50%; text-align: center; transform: translate(-50%, 1350%); }
             #errorText { position: absolute; top: 0px; left: 50%; text-align: center; transform: translate(-50%, 1900%); color: red; display: none; }
+            #leaderboardNumber { display: inline-block; position: relative; width: 25px; text-align: center; padding: 0px; background-color: gray; left: -5px; z-index: 1; }
+            #numberPadding { display: inline-block; position: relative; background-color: gray; height: 33px; width: 25px; left: -30px; top: -5px; }
         </style>
     </head>
     <body>
@@ -202,6 +204,13 @@
                     }
                 }
             }
+            function formatNumber(num) {
+                if (num >= 1000) {
+                    return (num / 1000).toFixed(0) + "k";
+                } else {
+                    return num.toString();
+                }
+            }
             let playerCount = 0;
             let playerString = "";
             function getPlayers() {
@@ -233,7 +242,7 @@
                                     objects.push(newPlayer);
                                 }
                             }
-                            playerString = playerString + "<div id='leaderboardSlot'>" + data[key].username + "</div><br>";
+                            playerString = playerString + "<div id='leaderboardSlot' style='width: 125px;'>" + data[key].username + "</div><div id='leaderboardNumber'>" + formatNumber(Math.round(data[key].y)) + "</div><div id='numberPadding'><div><br>";
                         }
                         document.getElementById("playerCount").textContent = "players: " + playerCount;
                         document.getElementById("leaderboard").innerHTML = "<div id='leaderboardSlot' style='background-color: #696969'><b>players</b></div><br>" + playerString;
@@ -422,6 +431,9 @@
                         arrowMode = !arrowMode;
                         console.log(!arrowMode + " " + arrowMode);
                         delete keys['f'];
+                    }
+                    if (keys['p']) {
+                        player.position.y += 10;
                     }
                     if (keys['e'] && objectPicker) { if (pickLayer == 1) { pickLayer = 2; }}
                     if (keys['q'] && objectPicker) { if (pickLayer == 2) { pickLayer = 1; }}
