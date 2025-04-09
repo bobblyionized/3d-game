@@ -37,6 +37,9 @@
                     <div class="square4" id="square" style="background-color: green; margin-left: 1px; margin-right: 1px;">4</div>
                     <div class="square5" id="square" style="color: white; background-color: black; margin-left: 1px; margin-right: 1px;">5</div>
                     <div class="square6" id="square" style="background-color: white; margin-left: 1px; margin-right: 1px;">1</div>
+                    <div class="square7" id="square" style="background-color: rgba(255, 255, 255, 0.75); margin-left: 1px; margin-right: 1px;">2</div>
+                    <div class="square8" id="square" style="background-color: rgba(255, 255, 255, 0.5); margin-left: 1px; margin-right: 1px;">3</div>
+                    <div class="square9" id="square" style="background-color: rgba(255, 255, 255, 0.25); margin-left: 1px; margin-right: 1px;">4</div>
                 </div>
                 <div id="blockPickerTop"><- Q<span style="margin-left: 40px;">Colors<span style="margin-left: 40px;">E -></div>
             </div>
@@ -279,7 +282,7 @@
                             if (existingObject) {
                                 existingObject.position.set(data[key].x, data[key].y, data[key].z);
                             } else {
-                                cubeMaterial = new THREE.MeshBasicMaterial({ color: data[key].color });
+                                cubeMaterial = new THREE.MeshBasicMaterial({ color: data[key].color, opacity: data[key].alpha, transparent: true });
                                 const newObject = new THREE.Mesh(cubeGeometry, cubeMaterial);
                                 newObject.position.set(data[key].x, data[key].y, data[key].z);
                                 newObject.userData.id = key;
@@ -362,6 +365,14 @@
                     audioElement.autoplay = true;
                     document.body.appendChild(audioElement);
                 }
+                if (data.message.includes("/audio")) {
+                    let command = data.message.split(' ');
+                    let sound = command[1];
+                    let audioElement = document.createElement("audio");
+                    audioElement.src = sound
+                    audioElement.autoplay = true;
+                    document.body.appendChild(audioElement);
+                }
                 chatArea.appendChild(message);
                 chatArea.scrollTop = chatArea.scrollHeight;
             });
@@ -370,6 +381,7 @@
             let objectPicker = false;
             let counter = 0;
             let a = 500;
+            let currentTransparency = 1;
             let currentColor = "rgb(255, 255, 255)";
             let currentBlock = "regular";
             let pickLayer = 1;
@@ -394,9 +406,9 @@
                     if (keys['r']) { player.position.x = 0; player.position.y = 5; player.position.z = 0; }
                     if (keys['c'] && (!player.userData.lastObjectTime || Date.now() - player.userData.lastObjectTime > a)) {
                         if (currentColor == "random") {
-                            push(objectRef, { x: player.position.x, y: player.position.y - 1.51, z: player.position.z, color: "rgb(" + Math.floor(Math.random() * 256) + ", " + Math.floor(Math.random() * 256) + ", " + Math.floor(Math.random() * 256) + ")" });
+                            push(objectRef, { x: player.position.x, y: player.position.y - 1.51, z: player.position.z, alpha: currentTransparency, color: "rgb(" + Math.floor(Math.random() * 256) + ", " + Math.floor(Math.random() * 256) + ", " + Math.floor(Math.random() * 256) + ")" });
                         } else {
-                            push(objectRef, { x: player.position.x, y: player.position.y - 1.51, z: player.position.z, color: currentColor });
+                            push(objectRef, { x: player.position.x, y: player.position.y - 1.51, z: player.position.z, alpha: currentTransparency, color: currentColor });
                         }
                         player.userData.lastObjectTime = Date.now();
                     }
@@ -418,6 +430,10 @@
                     if (keys['3'] && objectPicker && pickLayer == 1) { delete keys['3']; currentColor = currentColor == "rgb(255, 255, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 255, 0)"; }
                     if (keys['4'] && objectPicker && pickLayer == 1) { delete keys['4']; currentColor = currentColor == "rgb(0, 128, 0)" ? "rgb(255, 255, 255)" : "rgb(0, 128, 0)"; }
                     if (keys['5'] && objectPicker && pickLayer == 1) { delete keys['5']; currentColor = currentColor == "random" ? "rgb(255, 255, 255)" : "random"; }
+                    if (keys['1'] && objectPicker && pickLayer == 2) { delete keys['1']; currentTransparency = 1; }
+                    if (keys['2'] && objectPicker && pickLayer == 2) { delete keys['2']; currentTransparency = 0.75; }
+                    if (keys['3'] && objectPicker && pickLayer == 2) { delete keys['3']; currentTransparency = 0.5; }
+                    if (keys['4'] && objectPicker && pickLayer == 2) { delete keys['4']; currentTransparency = 0.25 }
                 }
                 player.position.add(movement);
                 velocityY -= gravity;
@@ -445,28 +461,46 @@
                 if (currentColor == "random") {
                     document.querySelector('.square5').style.boxShadow = "0 0 10px 5px white";
                 }
+                if (currentTransparency == 1) {
+                    document.querySelector(".square6").style.boxShadow = "0 0 10px 5px white";
+                }
+                if (currentTransparency == 0.75) {
+                    document.querySelector(".square7").style.boxShadow = "0 0 10px 5px white";
+                }
+                if (currentTransparency == 0.5) {
+                    document.querySelector(".square8").style.boxShadow = "0 0 10px 5px white";
+                }
+                if (currentTransparency == 0.25) {
+                    document.querySelector(".square9").style.boxShadow = "0 0 10px 5px white";
+                }
                 if (!objectPicker) {
                     document.getElementById("blockPicker").style.top = "-210px";
                 } else {
                     document.getElementById("blockPicker").style.top = "-105px";
                 }
                 if (pickLayer == 1) {
-                    document.getElementById("blockPickerTop").innerHTML = "<- Q<span style='margin-left: 40px;'>Colors</span><span style='margin-left: 32px;'>E -></span>"
+                    document.getElementById("blockPickerTop").innerHTML = "<- Q<span style='margin-left: 40px;'>Colors</span><span style='margin-left: 47px;'>E -></span>"
                     document.querySelector(".square1").style.display = "inline-block";
                     document.querySelector(".square2").style.display = "inline-block";
                     document.querySelector(".square3").style.display = "inline-block";
                     document.querySelector(".square4").style.display = "inline-block";
                     document.querySelector(".square5").style.display = "inline-block";
                     document.querySelector(".square6").style.display = 'none';
+                    document.querySelector(".square7").style.display = 'none';
+                    document.querySelector(".square8").style.display = 'none';
+                    document.querySelector(".square9").style.display = 'none';
                 }
                 if (pickLayer == 2) {
-                    document.getElementById("blockPickerTop").innerHTML = "<- Q<span style='margin-left: 40px;'>Blocks</span><span style='margin-left: 32px;'>E -></span>"
+                    document.getElementById("blockPickerTop").innerHTML = "<- Q<span style='margin-left: 20px;'>Transparency</span><span style='margin-left: 10px;'>E -></span>"
                     document.querySelector(".square1").style.display = "none";
                     document.querySelector(".square2").style.display = "none";
                     document.querySelector(".square3").style.display = "none";
                     document.querySelector(".square4").style.display = "none";
                     document.querySelector(".square5").style.display = "none";
                     document.querySelector(".square6").style.display = 'inline-block';
+                    document.querySelector(".square7").style.display = 'inline-block';
+                    document.querySelector(".square8").style.display = 'inline-block';
+                    document.querySelector(".square9").style.display = 'inline-block';
                 }
                 document.getElementById("cords").textContent = "cords: " + Math.round(player.position.x) + ", " + Math.round(player.position.y) + ", " + Math.round(player.position.z);
                 let cameraOffset = new THREE.Vector3(Math.sin(cameraAngleX) * radius, 3 + Math.sin(cameraAngleY) * 4, Math.cos(cameraAngleX) * radius);
