@@ -76,7 +76,7 @@
             let arrowRef = ref(database, "arrows/");
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let currentPlayerRef = ref(database, "players/" + playerID);
-            let gameVersion = "0.1";
+            let gameVersion = "0.2";
             let isGoodVersion = false;
             document.getElementById("versionText").textContent = "version " + gameVersion;
             get(ref(database, '/version')).then((snapshot) => {
