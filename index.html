@@ -19,8 +19,7 @@
             #startButton:active { cursor: pointer; transform: scale(1.05) translate(-47.5%, -47.5%); }
             #versionText { position: absolute; top: 0px; left: 50%; text-align: center; transform: translate(-50%, 1350%); }
             #errorText { position: absolute; top: 0px; left: 50%; text-align: center; transform: translate(-50%, 1900%); color: red; display: none; }
-            #leaderboardNumber { display: inline-block; position: relative; width: 25px; text-align: center; padding: 0px; background-color: gray; left: -5px; z-index: 1; }
-            #numberPadding { display: inline-block; position: relative; background-color: gray; height: 33px; width: 25px; left: -30px; top: -5px; }
+            #leaderboardNumber { display: inline-block; position: relative; width: 25px; text-align: center; padding: 0px; left: -5px; z-index: 1; margin: 0px; }
         </style>
     </head>
     <body>
@@ -242,7 +241,7 @@
                                     objects.push(newPlayer);
                                 }
                             }
-                            playerString = playerString + "<div id='leaderboardSlot' style='width: 125px;'>" + data[key].username + "</div><div id='leaderboardNumber'>" + formatNumber(Math.round(data[key].y)) + "</div><div id='numberPadding'><div><br>";
+                            playerString = playerString + "<div id='leaderboardSlot' style='width: 125px;'>" + data[key].username + "</div><div id='leaderboardNumber'>" + formatNumber(Math.round(data[key].y)) + "</div><br>";
                         }
                         document.getElementById("playerCount").textContent = "players: " + playerCount;
                         document.getElementById("leaderboard").innerHTML = "<div id='leaderboardSlot' style='background-color: #696969'><b>players</b></div><br>" + playerString;
@@ -524,7 +523,6 @@
                 renderer.render(scene, camera);
                 camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, 0.1, 1000);
                 requestAnimationFrame(gameLoop);
-                getPlayers();
                 for (let object of objects) {
                     if (player.position.distanceTo(object.position) < 30 || object.name == "ground" && object.name != "terrain") {
                         handleCollisions(object);
@@ -539,6 +537,7 @@
                     counter = 0;
                     pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value, speed: 0.1 };
                     set(currentPlayerRef, pos);
+                    getPlayers();
                 }
                 counter++;
             }
