@@ -431,9 +431,6 @@
                         console.log(!arrowMode + " " + arrowMode);
                         delete keys['f'];
                     }
-                    if (keys['p']) {
-                        player.position.y += 10;
-                    }
                     if (keys['e'] && objectPicker) { if (pickLayer == 1) { pickLayer = 2; }}
                     if (keys['q'] && objectPicker) { if (pickLayer == 2) { pickLayer = 1; }}
                     if (keys['1'] && objectPicker && pickLayer == 1) { delete keys['1']; currentColor = currentColor == "rgb(255, 0, 0)" ? "rgb(255, 255, 255)" : "rgb(255, 0, 0)"; }
