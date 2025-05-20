@@ -20,6 +20,14 @@
             #versionText { position: absolute; top: 0px; left: 50%; text-align: center; transform: translate(-50%, 1350%); }
             #errorText { position: absolute; top: 0px; left: 50%; text-align: center; transform: translate(-50%, 1900%); color: red; display: none; }
             #leaderboardNumber { display: inline-block; position: relative; width: 25px; text-align: center; padding: 0px; left: -5px; z-index: 1; margin: 0px; }
+
+            .bar { height: 25px; width: 200px; position: absolute; right: 10px; transform-origin: left; }
+            .backBar { background-color: gray; }
+            #healthBar { background-color: red; bottom: 10px; z-index: 1; }
+            #healthBarBack { bottom: 10px; }
+            #sheildBar { background-color: blue; bottom: 50px; z-index: 1; }
+            #sheildBarBack { bottom: 50px; }
+            #cursor { height: 5px; width: 5px; background-color: white; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 1px solid black; }
         </style>
     </head>
     <body>
@@ -44,9 +52,16 @@
                 </div>
                 <div id="blockPickerTop"><- Q<span style="margin-left: 40px;">Colors<span style="margin-left: 40px;">E -></div>
             </div>
+            <div id="healthBarStuff">
+                <div id="sheildBar" class="bar"></div>
+                <div id="sheildBarBack" class="bar backBar"></div>
+                <div id="healthBar" class="bar"></div>
+                <div id="healthBarBack" class="bar backBar"></div>
+            </div>
+            <div id="cursor"></div>
         </div>
         <div id="usernameInput">
-            <p id="versionText">version 0.1</p>
+            <p id="versionText">version 0.2</p>
             <input onkeydown="return /[a-z0-9!@#$%^&*(){}:;<,>.?/|]/i.test(event.key)" maxlength="50" type="text" id="username" placeholder="enter username">
             <button id="startButton">start</button>
             <p id="errorText">get the new version bruh</p>
@@ -95,6 +110,7 @@
             let objects = [];
             const scene = new THREE.Scene();
             let FOV = 75;
+            let health = 200;
             let camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -116,6 +132,7 @@
             const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
             let cubeMaterial = new THREE.MeshBasicMaterial({ color: "rgb(255, 255, 255)" });
             let cooldown = 500;
+            let color = "red";
             document.addEventListener('keydown', (event) => {
                 keys[event.key] = true;
                 const chatInput = document.getElementById("chatInput");
@@ -165,15 +182,59 @@
                     document.body.requestPointerLock();
                 }
             });
+            document.addEventListener('mousedown', (event) => {
+                const raycaster = new THREE.Raycaster();
+                const mouse = new THREE.Vector2(
+                    ( event.clientX / window.innerWidth ) * 2 - 1,
+                    - ( event.clientY / window.innerHeight ) * 2 + 1
+                );
+                raycaster.setFromCamera(mouse, camera);
+                const playerHits = raycaster.intersectObjects(objects.filter(obj => obj.userData.id && obj.userData.id != playerID), true);
+                if (playerHits.length > 0) {
+                    const hitPlayer = playerHits[0].object;
+                    const hitID = hitPlayer.userData.id || hitPlayer.parent?.userData?.id;
+                    const targetHealthRef = ref(database, `players/${hitID}/health`);
+                    get(targetHealthRef).then(snapshot => {
+                        if (snapshot.exists()) {
+                            let newHealth = snapshot.val() - 25;
+                            if (newHealth < 0) newHealth = 0;
+                            set(targetHealthRef, newHealth).then(() => {
+                                let newText = document.createElement("h1");
+                                newText.style.position = "absolute";
+                                newText.textContent = "25";
+                                newText.style.color = "green";
+                                newText.style.transform = "translate(-50%, -50%)";
+                                newText.style.left = window.innerWidth / 2 + "px";
+                                newText.style.top = window.innerHeight / 2 + "px";
+                                newText.style.transition = "1s ease";
+                                setTimeout(() => {
+                                    newText.style.transform = "translate(-50%, -200%)"
+                                    newText.style.opacity = 0;
+                                }, 10);
+                                setTimeout(() => {
+                                    newText.remove();
+                                }, 1000);
+                                document.body.appendChild(newText);
+                            })
+                        }
+                    })
+                }
+            });
             window.addEventListener('beforeunload', (event) => {
                 push(messageRef, { username: "System", message: document.getElementById("username").value + " has left the game" });
                 set(messageRef, null);
+            });
+            const healthRef = ref(database, `players/${playerID}/health`);
+            onValue(healthRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    health = snapshot.val();
+                }
             });
             document.getElementById("startButton").addEventListener('click', () => {
                 if (document.getElementById("username").value == "") return;
                 if (!isGoodVersion) return;
                 playerRef = ref(database, "players/");
-                pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value };
+                pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value, health: 200 };
                 set(currentPlayerRef, pos);
                 gameLoop();
                 push(messageRef, { username: "System", message: document.getElementById("username").value + " has joined the game" });
@@ -225,6 +286,7 @@
                                 let existingPlayer = objects.find(obj => obj.userData.id === key);
                                 if (existingPlayer) {
                                     existingPlayer.position.lerp(new THREE.Vector3(data[key].x, data[key].y, data[key].z), 0.1);
+                                    existingPlayer.material.color.set(data[key].color);
                                 } else {
                                     const newPlayer = new THREE.Mesh(playerGeometry, otherPlayerMaterial);
                                     newPlayer.position.set(data[key].x, data[key].y, data[key].z);
@@ -233,6 +295,7 @@
                                         map: new THREE.CanvasTexture(makeText(data[key].username)),
                                         transparent: true
                                     });
+                                    newPlayer.material.color.set(data[key].color);
                                     const sprite = new THREE.Sprite(spriteMaterial);
                                     sprite.scale.set(2, 1, 1);
                                     sprite.position.set(0, 1, 0);
@@ -405,7 +468,7 @@
                 const direction = new THREE.Vector3(Math.sin(cameraAngleX), 0, Math.cos(cameraAngleX));
                 const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
                 let movement = new THREE.Vector3(0, 0, 0);
-                if (document.getElementById("chatInput").value == "") {
+                if (document.getElementById("chatInput").value == "" && health > 0) {
                     if (keys['s']) player.position.add(direction.clone().multiplyScalar(pos.speed));
                     if (keys['w']) player.position.add(direction.clone().multiplyScalar(-pos.speed));
                     if (keys['d']) player.position.add(right.clone().multiplyScalar(-pos.speed));
@@ -512,14 +575,14 @@
                 }
                 document.getElementById("cords").textContent = "cords: " + Math.round(player.position.x) + ", " + Math.round(player.position.y) + ", " + Math.round(player.position.z);
                 let cameraOffset = new THREE.Vector3(Math.sin(cameraAngleX) * radius, 3 + Math.sin(cameraAngleY) * 4, Math.cos(cameraAngleX) * radius);
+                camera.position.copy(player.position).add(cameraOffset);
+                camera.position.y += 2;
+                camera.lookAt(new THREE.Vector3(player.position.x, player.position.y + 2, player.position.z));
                 if (arrowMode) {
                     //cameraOffset.x += 2;
                 }
-                camera.position.copy(player.position).add(cameraOffset);
-                camera.lookAt(player.position);
                 renderer.render(scene, camera);
                 camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, 0.1, 1000);
-                requestAnimationFrame(gameLoop);
                 for (let object of objects) {
                     if (player.position.distanceTo(object.position) < 30 || object.name == "ground" && object.name != "terrain") {
                         handleCollisions(object);
@@ -532,11 +595,40 @@
                 getObjects(objectsClose - 1);
                 if (counter > 5) {
                     counter = 0;
-                    pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value, speed: 0.1 };
+                    pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value, speed: 0.1, health: health, color: color };
                     set(currentPlayerRef, pos);
                     getPlayers();
                 }
+                if (health > 0) {
+                    const maxHealth = 200;
+                    const shieldThreshold = 100;
+                    const barWidthMultiplier = 2;
+                    document.getElementById("healthBar").style.width = Math.min(health, shieldThreshold) * barWidthMultiplier + "px";
+                    if (health > shieldThreshold) {
+                        document.getElementById("sheildBar").style.width = (health - shieldThreshold) * barWidthMultiplier + "px";
+                    } else {
+                        document.getElementById("sheildBar").style.width = "0px";
+                    }
+                    health = Math.min(health + 0.05, maxHealth);
+                } else {
+                    document.getElementById("healthBar").style.width = "0px";
+                    color = "gray";
+                    playerMaterial.color.set(color);
+                    pos = { x: player.position.x, y: player.position.y, z: player.position.z, username: document.getElementById("username").value, speed: 0.1, health: health, color: color };
+                    set(currentPlayerRef, pos);
+                    console.log("died");
+                    setTimeout(() => {
+                        health = 200;
+                        color = "red";
+                        playerMaterial.color.set("rgb(0, 255, 0)");
+                        console.log("respawn");
+                        player.position.x = 0;
+                        player.position.y = 5;
+                        player.position.z = 0;
+                    }, 2000);
+                }
                 counter++;
+                requestAnimationFrame(gameLoop);
             }
         </script>
     </body>
