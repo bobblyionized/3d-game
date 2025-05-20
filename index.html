@@ -61,7 +61,7 @@
             <div id="cursor"></div>
         </div>
         <div id="usernameInput">
-            <p id="versionText">version 0.2</p>
+            <p id="versionText">version 0.3</p>
             <input onkeydown="return /[a-z0-9!@#$%^&*(){}:;<,>.?/|]/i.test(event.key)" maxlength="50" type="text" id="username" placeholder="enter username">
             <button id="startButton">start</button>
             <p id="errorText">get the new version bruh</p>
@@ -91,7 +91,7 @@
             let arrowRef = ref(database, "arrows/");
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let currentPlayerRef = ref(database, "players/" + playerID);
-            let gameVersion = "0.2";
+            let gameVersion = "0.3";
             let isGoodVersion = false;
             document.getElementById("versionText").textContent = "version " + gameVersion;
             get(ref(database, '/version')).then((snapshot) => {
